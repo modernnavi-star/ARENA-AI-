@@ -117,7 +117,7 @@ class ArenaViewModel : ViewModel() {
                     .await()
 
                 @Suppress("UNCHECKED_CAST")
-                val data = result.data as? Map<String, Any?>
+                val data = result.getData() as? Map<String, Any?>
                 val returnedChatId = data?.get("chatId") as? String
                 if (returnedChatId != null && returnedChatId != uiState.selectedChatId) {
                     selectChat(returnedChatId)
