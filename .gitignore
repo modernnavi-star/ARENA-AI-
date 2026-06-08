@@ -1,0 +1,29 @@
+# Android/Gradle
+.gradle/
+build/
+**/build/
+local.properties
+*.iml
+.idea/
+.DS_Store
+
+# Firebase / secrets
+google-services.json
+.env
+.env.*
+!.env.example
+serviceAccount*.json
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Keystores
+*.jks
+*.keystore
+*.p12
+
+# Local npm cache/logs
+.npm/
