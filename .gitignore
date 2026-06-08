@@ -27,3 +27,6 @@ yarn-error.log*
 
 # Local npm cache/logs
 .npm/
+
+# Arena local uploads
+uploads/
