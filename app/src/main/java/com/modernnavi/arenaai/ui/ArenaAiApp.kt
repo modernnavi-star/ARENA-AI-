@@ -116,6 +116,11 @@ private fun SignInScreen() {
         val id = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
         if (id == 0) "" else context.getString(id)
     }
+    val googleAppId = remember(context) {
+        val id = context.resources.getIdentifier("google_app_id", "string", context.packageName)
+        if (id == 0) "" else context.getString(id)
+    }
+    val isDemoFirebaseConfig = webClientId.startsWith("123456789012-") || googleAppId.contains("abcdef1234567890")
 
     val googleSignInClient = remember(webClientId) {
         GoogleSignIn.getClient(
@@ -130,7 +135,7 @@ private fun SignInScreen() {
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode != Activity.RESULT_OK) {
             isSigningIn = false
-            error = "Google sign-in was cancelled."
+            error = "Google sign-in did not complete. If you did not press Back, check that Firebase Google login is enabled and this APK signing SHA-1/SHA-256 is added in Firebase."
             return@rememberLauncherForActivityResult
         }
         val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
@@ -189,7 +194,9 @@ private fun SignInScreen() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (webClientId.isBlank()) {
-                    SetupWarning()
+                    SetupWarning("Setup needed: download google-services.json from Firebase and place it in app/ to generate the Google web client ID.")
+                } else if (isDemoFirebaseConfig) {
+                    SetupWarning("This APK was built with demo Firebase settings, so Google sign-in cannot work. Add your real Firebase google-services.json or GitHub secret, then rebuild the APK.")
                 }
                 Button(
                     onClick = {
@@ -198,12 +205,14 @@ private fun SignInScreen() {
                             error = "Unable to start sign-in from this screen."
                         } else if (webClientId.isBlank()) {
                             error = "Add app/google-services.json from Firebase before enabling Google login."
+                        } else if (isDemoFirebaseConfig) {
+                            error = "This demo APK cannot use Google login. Build again with your real Firebase google-services.json."
                         } else {
                             isSigningIn = true
                             launcher.launch(googleSignInClient.signInIntent)
                         }
                     },
-                    enabled = !isSigningIn,
+                    enabled = !isSigningIn && !isDemoFirebaseConfig,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Rounded.Login, contentDescription = null)
@@ -217,7 +226,7 @@ private fun SignInScreen() {
 }
 
 @Composable
-private fun SetupWarning() {
+private fun SetupWarning(message: String) {
     Surface(
         color = MaterialTheme.colorScheme.errorContainer,
         contentColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -225,7 +234,7 @@ private fun SetupWarning() {
         modifier = Modifier.fillMaxWidth()
     ) {
         Text(
-            "Setup needed: download google-services.json from Firebase and place it in app/ to generate the Google web client ID.",
+            message,
             modifier = Modifier.padding(14.dp),
             style = MaterialTheme.typography.bodySmall
         )

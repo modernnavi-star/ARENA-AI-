@@ -63,7 +63,16 @@ com.modernnavi.arenaai
 app/google-services.json
 ```
 
-An example placeholder is provided at `app/google-services.json.example`.
+An example placeholder is provided at `app/google-services.json.example`. The APK built only with this placeholder is a demo build and **Google sign-in will not work** until a real Firebase config is used.
+
+7. Add the debug APK signing fingerprints below to your Firebase Android app:
+
+```text
+SHA-1:   51:5A:59:D7:8E:04:4E:C6:93:D6:38:89:5C:D9:FC:C0:9E:E7:8E:58
+SHA-256: 67:3F:82:CF:D9:75:16:C6:E9:CA:A1:D6:77:4F:F2:AA:88:72:CA:EB:C9:01:30:CD:BA:D9:66:40:B5:22:95:EC
+```
+
+These fingerprints match the committed non-secret `app/ci-debug.p12` used for debug APK builds.
 
 ### 2. Configure AI provider keys
 
@@ -111,6 +120,26 @@ gradle :app:assembleDebug
 ```
 
 Alternatively, open the project in Android Studio and let it create/use the Gradle wrapper for your machine.
+
+## Build a GitHub APK with working Google sign-in
+
+The GitHub workflow can create the APK artifact. For Google sign-in to work in that artifact:
+
+1. In Firebase, add the SHA-1/SHA-256 fingerprints listed above to the Android app.
+2. Download the updated `google-services.json` from Firebase.
+3. Add one GitHub repository secret:
+
+```text
+GOOGLE_SERVICES_JSON_B64
+```
+
+Set it to the base64 value of your real `google-services.json`:
+
+```bash
+base64 -w 0 app/google-services.json
+```
+
+Then run/push the workflow again. The artifact `arena-ai-debug-apk` will contain `arena-ai-debug.apk` with real Google login config.
 
 ## Main Firestore data model
 

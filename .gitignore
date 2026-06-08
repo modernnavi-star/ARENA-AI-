@@ -30,3 +30,6 @@ yarn-error.log*
 
 # Arena local uploads
 uploads/
+
+# Committed non-secret CI debug signing certificate for reproducible debug APK SHA fingerprints
+!app/ci-debug.p12

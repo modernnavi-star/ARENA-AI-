@@ -17,7 +17,20 @@ android {
         versionName = "1.0.0"
     }
 
+    signingConfigs {
+        create("ciDebug") {
+            storeFile = file("ci-debug.p12")
+            storePassword = "arenaai"
+            keyAlias = "arenaai"
+            keyPassword = "arenaai"
+            storeType = "pkcs12"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("ciDebug")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
