@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Arena AI</title>
+  <style>
+:root{--bg:#f8f6ef;--panel:#fff;--ink:#25231f;--muted:#706b62;--line:#e5dfd2;--soft:#f1ede3;--accent:#111827;--purple:#7c3aed;--green:#047857;--red:#b91c1c;--shadow:0 18px 50px rgba(0,0,0,.12)}*{box-sizing:border-box}html,body{height:100%;margin:0}body{font-family:Inter,Arial,system-ui,sans-serif;background:var(--bg);color:var(--ink);overflow:hidden}button,textarea,input,select{font:inherit}button{border:0;background:none;color:inherit}.app{height:100%;display:grid;grid-template-columns:330px minmax(0,1fr)}.side{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-width:0}.brand{height:70px;display:flex;align-items:center;gap:8px;padding:0 18px;font-family:Georgia,serif;font-size:34px;font-weight:800;border-bottom:1px solid var(--line)}.temple{font-size:30px}.plain{font-size:20px}.new-chat{margin:14px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;text-align:left;font-weight:800}.mode-list{padding:0 8px;border-bottom:1px solid var(--line)}.mode-item{width:100%;display:flex;gap:12px;padding:14px;border-radius:14px;text-align:left;align-items:center}.mode-item span{font-size:28px;width:36px}.mode-item b{display:block;font-size:18px}.mode-item small{display:block;color:var(--muted);font-size:13px;margin-top:3px}.mode-item.active,.mode-item:hover{background:var(--soft)}.history-wrap{flex:1;min-height:0;overflow:auto;padding:8px}.history-title{color:var(--muted);font-size:12px;text-transform:uppercase;padding:12px}.hist{width:100%;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;padding:12px;border-radius:12px}.hist.active,.hist:hover{background:var(--soft)}.account{border-top:1px solid var(--line);padding:14px;display:flex;gap:10px;align-items:center}.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#f97316)}.account-text{min-width:0;flex:1}.account-text b,.account-text small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.account-text small{color:var(--muted)}.mini,.pill{padding:8px 10px;border-radius:10px;background:var(--soft)}.main{min-width:0;display:grid;grid-template-rows:74px minmax(0,1fr) auto}.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:#fcfbf8;border-bottom:1px solid var(--line)}.topbar h1{font-size:28px;margin:0}.topbar p{margin:3px 0 0;color:var(--muted);font-size:13px}.top-actions{display:flex;gap:8px}.icon{width:44px;height:44px;border-radius:13px;background:var(--soft);font-size:22px}.mobile{display:none}.chat{overflow:auto;padding:20px}.welcome{max-width:1050px;margin:auto}.welcome h2{font-size:32px;margin:14px 0 4px}.welcome p{color:var(--muted)}.mode-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 8px 24px rgba(0,0,0,.04);text-align:left}.card.active{outline:2px solid var(--accent)}.card b{font-size:18px}.card small{display:block;color:var(--muted);margin-top:6px}.model-row{display:flex;gap:8px;overflow:auto;padding:8px 0}.chip{white-space:nowrap;padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:#faf8f2}.chip.active{background:var(--accent);color:white}.sample-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}.sample{padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--panel);text-align:left}.msg{max-width:980px;margin:0 auto 18px;display:flex}.msg.user{justify-content:flex-end}.bubble{max-width:88%;border:1px solid var(--line);border-radius:18px;padding:16px;white-space:pre-wrap;line-height:1.55;background:#fff}.user .bubble{background:#111827;color:#fff}.assistant .bubble{background:#fff}.tag{font-size:12px;color:var(--muted);margin-top:10px}.duel{max-width:1120px;margin:0 auto 18px;display:grid;grid-template-columns:1fr 1fr;gap:12px}.duel-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;white-space:pre-wrap;line-height:1.55}.vote{margin-top:12px;background:var(--soft);padding:9px 11px;border-radius:10px}.composer{border-top:1px solid var(--line);padding:12px;background:var(--panel)}.attachments{max-width:1050px;margin:0 auto 6px;color:var(--muted);font-size:13px}.compose-box{max-width:1050px;margin:auto;display:grid;grid-template-columns:auto 1fr auto;align-items:end;gap:8px;border:1px solid var(--line);border-radius:18px;background:#fff;padding:10px}.attach,.send{border-radius:14px;padding:13px 16px;background:var(--soft);font-weight:800}.send{background:var(--accent);color:#fff}.compose-box textarea{border:0;outline:0;resize:none;min-height:50px;max-height:170px;padding:12px;background:transparent}.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:4}.overlay.show{display:block}.workspace{position:fixed;right:0;top:0;bottom:0;width:min(620px,94vw);background:#fff;z-index:5;box-shadow:var(--shadow);transform:translateX(110%);transition:.24s;display:flex;flex-direction:column}.workspace.open{transform:translateX(0)}.workspace header{height:66px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding:0 16px}.workspace-tools{display:flex;gap:8px;padding:12px;border-bottom:1px solid var(--line)}.danger{color:var(--red)}.workspace-list{overflow:auto;padding:12px}.file{border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:12px}.file-title{font-weight:900}.file-meta{font-size:12px;color:var(--muted);margin:3px 0 8px}.file-actions{display:flex;gap:8px;flex-wrap:wrap}.preview{white-space:pre-wrap;background:#111827;color:#e5e7eb;border-radius:12px;padding:12px;margin-top:10px;max-height:240px;overflow:auto;font:12px ui-monospace,monospace}.toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%);padding:12px 16px;border-radius:14px;background:#111827;color:#fff;opacity:0;transition:.2s;z-index:10}.toast.show{opacity:1}.empty{padding:32px;text-align:center;color:var(--muted)}
+@media(max-width:860px){.app{grid-template-columns:1fr}.side{position:fixed;left:0;top:0;bottom:0;width:88vw;z-index:6;transform:translateX(-105%);transition:.24s;box-shadow:var(--shadow)}.side.open{transform:translateX(0)}.mobile{display:block}.topbar{height:66px}.topbar h1{font-size:24px}.chat{padding:12px}.mode-grid{grid-template-columns:1fr 1fr}.sample-grid{grid-template-columns:1fr}.duel{grid-template-columns:1fr}.bubble{max-width:94%}.workspace{width:96vw}}
+
+/* Mobile fit pass: keep Arena usable on small Android screens and large font settings */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{font-size:15px}.welcome h2{font-size:clamp(28px,8vw,52px);line-height:1.08}.topbar h1{font-size:clamp(24px,7vw,42px)}.card b{font-size:clamp(17px,4.8vw,28px)}.sample{font-size:clamp(16px,4.5vw,24px)}.compose-box textarea{font-size:clamp(16px,4.5vw,22px)}
+@media(max-width:480px){.topbar{padding:0 10px}.icon{width:48px;height:48px}.chat{padding:10px}.welcome{padding-bottom:8px}.welcome h2{margin-top:8px}.mode-grid{gap:8px}.card{padding:12px;min-height:104px}.card small{font-size:14px}.model-row{gap:7px}.chip{padding:9px 12px;font-size:16px}.sample-grid{gap:8px}.sample{padding:12px}.composer{padding:8px}.compose-box{border-radius:16px;padding:8px;grid-template-columns:52px 1fr 58px}.attach,.send{padding:12px 13px}.bubble{max-width:100%;font-size:16px}.duel-card{font-size:16px}.side{width:92vw}.brand{font-size:30px}.mode-item b{font-size:17px}}
+
+/* Extra compact Android layout for complete fit */
+@media(max-width:600px){
+  .main{grid-template-rows:60px minmax(0,1fr) auto}.topbar{height:60px}.topbar h1{font-size:28px;line-height:1}.topbar p{font-size:12px}.icon{width:44px;height:44px}.welcome h2{font-size:34px;line-height:1.05}.welcome p{font-size:17px;line-height:1.35}.mode-grid{grid-template-columns:1fr 1fr}.card{padding:10px;min-height:88px;border-radius:16px}.card b{font-size:18px;line-height:1.15}.card small{font-size:13px;line-height:1.2}.welcome h3{font-size:22px;margin:12px 0 4px}.chip{font-size:15px;padding:8px 11px}.sample{font-size:17px;padding:11px;border-radius:14px}.sample-grid{margin-top:10px}.composer{padding:7px}.compose-box{grid-template-columns:48px 1fr 54px}.attach,.send{padding:10px 11px}.compose-box textarea{font-size:17px;min-height:46px;padding:8px}.attachments{font-size:12px}.chat{padding:9px}.bubble,.duel-card{font-size:15px;line-height:1.45}.brand{font-size:28px;height:60px}.mode-item{padding:11px}.mode-item b{font-size:16px}.mode-item small{font-size:12px}.account{padding:10px}
+}
+
+</style>
+</head>
+<body>
+  <div id="app" class="app">
+    <aside id="side" class="side">
+      <header class="brand"><span class="temple">▥</span><span>Arena</span><button id="modeMenuButton" class="plain">⌄</button></header>
+      <button id="newChatSide" class="new-chat">＋ New Chat</button>
+      <nav class="mode-list">
+        <button class="mode-item" data-mode="battle"><span>⚔</span><div><b>Battle Mode</b><small>Battle 2 anonymous models</small></div></button>
+        <button class="mode-item" data-mode="agent"><span>🛠</span><div><b>Agent Mode</b><small>Built for complex tasks</small></div></button>
+        <button class="mode-item" data-mode="side"><span>💬</span><div><b>Side by Side</b><small>Compare 2 models of your choice</small></div></button>
+        <button class="mode-item" data-mode="direct"><span>○</span><div><b>Direct</b><small>Chat with 1 model at a time</small></div></button>
+      </nav>
+      <section class="history-wrap"><div class="history-title">Chats</div><div id="history"></div></section>
+      <footer class="account"><div class="avatar"></div><div class="account-text"><b id="userName">Arena user</b><small id="userEmail"></small></div><button id="signOut" class="mini">Sign out</button></footer>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button id="openSide" class="icon mobile">☰</button>
+        <div><h1 id="topTitle">Arena</h1><p id="topSubtitle">Built for complex tasks</p></div>
+        <div class="top-actions"><button id="openWorkspace" class="icon">📁</button><button id="newChatTop" class="icon">＋</button></div>
+      </header>
+      <section id="chat" class="chat"></section>
+      <section class="composer">
+        <div id="attachments" class="attachments"></div>
+        <div class="compose-box">
+          <button id="attach" class="attach">📎</button>
+          <textarea id="prompt" rows="1" placeholder="Message Arena AI..."></textarea>
+          <button id="send" class="send">➜</button>
+          <input id="fileInput" type="file" multiple hidden>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="overlay" class="overlay"></div>
+  <section id="workspace" class="workspace">
+    <header><h2>Workspace</h2><button id="closeWorkspace" class="icon">✕</button></header>
+    <div class="workspace-tools"><button id="exportAll" class="pill">Download all JSON</button><button id="clearWorkspace" class="pill danger">Clear</button></div>
+    <div id="workspaceList" class="workspace-list"></div>
+  </section>
+  <div id="toast" class="toast"></div>
+  <script>
+const params = new URLSearchParams(location.search);
+const USER_EMAIL = params.get('email') || '';
+const USER_NAME = params.get('name') || 'Arena user';
+const stateKey = 'arena-ai-complete-web-state-v1';
+const models = ['Random', 'Gemini', 'OpenAI', 'Claude', 'Mistral', 'Llama', 'Qwen', 'Kimi', 'Grok'];
+let attachedFiles = [];
+let state = loadState();
+
+function defaultState() {
+  return { mode: 'agent', modelA: 'Random', modelB: 'Claude', current: null, chats: [], workspace: [] };
+}
+function loadState() { try { return JSON.parse(localStorage.getItem(stateKey)) || defaultState(); } catch (_) { return defaultState(); } }
+function save() { localStorage.setItem(stateKey, JSON.stringify(state)); }
+function id() { return 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2); }
+function now() { return new Date().toLocaleString(); }
+function esc(v) { return String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function toast(msg) { const t = byId('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
+function byId(x) { return document.getElementById(x); }
+function currentChat() { if (!state.current) newChat(false); return state.chats.find(c => c.id === state.current); }
+function newChat(shouldRender = true) { const chat = { id: id(), title: 'New chat', mode: state.mode, messages: [], created: now() }; state.chats.unshift(chat); state.current = chat.id; save(); if (shouldRender) render(); }
+function setMode(mode) { state.mode = mode; save(); render(); closeSide(); }
+function setModel(which, model) { if (which === 'a') state.modelA = model; else state.modelB = model; save(); render(); }
+function modeInfo() { return { battle: ['Battle Mode', 'Battle 2 anonymous models'], agent: ['Agent Mode', 'Built for complex tasks'], side: ['Side by Side', 'Compare 2 models of your choice'], direct: ['Direct', 'Chat with 1 model at a time'] }[state.mode] || ['Agent Mode', 'Built for complex tasks']; }
+function openSide() { byId('side').classList.add('open'); byId('overlay').classList.add('show'); }
+function closeSide() { byId('side').classList.remove('open'); byId('overlay').classList.remove('show'); }
+function openWorkspace() { byId('workspace').classList.add('open'); byId('overlay').classList.add('show'); renderWorkspace(); }
+function closeWorkspace() { byId('workspace').classList.remove('open'); byId('overlay').classList.remove('show'); }
+function signOut() { try { ArenaAndroid.signOut(); } catch (_) { toast('Sign out unavailable'); } }
+
+function render() {
+  const info = modeInfo();
+  byId('userName').textContent = USER_NAME;
+  byId('userEmail').textContent = USER_EMAIL;
+  byId('topTitle').textContent = info[0];
+  byId('topSubtitle').textContent = info[1];
+  document.querySelectorAll('.mode-item').forEach(b => b.classList.toggle('active', b.dataset.mode === state.mode));
+  renderHistory();
+  renderChat();
+}
+function renderHistory() {
+  const h = byId('history');
+  if (!state.chats.length) { h.innerHTML = '<div class="empty">No chats yet</div>'; return; }
+  h.innerHTML = state.chats.map(c => `<button class="hist ${c.id === state.current ? 'active' : ''}" data-chat="${c.id}">✣ ${esc(c.title)}</button>`).join('');
+  h.querySelectorAll('[data-chat]').forEach(b => b.onclick = () => { state.current = b.dataset.chat; save(); render(); closeSide(); });
+}
+function renderWelcome() {
+  const modeCards = [ ['battle','⚔','Battle Mode','Battle 2 anonymous models'], ['agent','🛠','Agent Mode','Built for complex tasks'], ['side','💬','Side by Side','Compare two models'], ['direct','○','Direct','One model chat'] ];
+  return `<div class="welcome"><h2>What are we building today?</h2><p>Choose a mode, pick models, attach files, and generate workspace outputs.</p><div class="mode-grid">${modeCards.map(m => `<button class="card ${state.mode === m[0] ? 'active' : ''}" data-set-mode="${m[0]}"><b>${m[1]} ${m[2]}</b><small>${m[3]}</small></button>`).join('')}</div><h3>Models</h3><div class="model-row">${models.map(m => `<button class="chip ${state.modelA === m ? 'active' : ''}" data-model="${m}">${m}</button>`).join('')}</div><div class="sample-grid">${['Create an article regarding AI','Build an Android app architecture','Compare Gemini and Claude','Generate a PDF-ready report'].map(s => `<button class="sample" data-sample="${esc(s)}">${esc(s)}</button>`).join('')}</div></div>`;
+}
+function renderChat() {
+  const chat = currentChat();
+  const el = byId('chat');
+  if (!chat.messages.length) {
+    el.innerHTML = renderWelcome();
+    el.querySelectorAll('[data-set-mode]').forEach(b => b.onclick = () => setMode(b.dataset.setMode));
+    el.querySelectorAll('[data-model]').forEach(b => b.onclick = () => setModel('a', b.dataset.model));
+    el.querySelectorAll('[data-sample]').forEach(b => { b.onclick = () => { byId('prompt').value = b.dataset.sample; autoGrow(byId('prompt')); }; });
+    return;
+  }
+  el.innerHTML = chat.messages.map(m => {
+    if (m.type === 'duel') return `<div class="duel"><div class="duel-card">${format(m.a)}<button class="vote">Vote A</button></div><div class="duel-card">${format(m.b)}<button class="vote">Vote B</button></div></div>`;
+    return `<div class="msg ${m.role}"><div class="bubble">${format(m.content)}<div class="tag">${esc(m.model || '')}</div></div></div>`;
+  }).join('');
+  el.querySelectorAll('.vote').forEach(b => b.onclick = () => toast('Vote saved'));
+  el.scrollTop = el.scrollHeight;
+}
+function format(s) { return esc(s).replace(/\n/g, '<br>'); }
+function autoGrow(t) { t.style.height = '50px'; t.style.height = Math.min(t.scrollHeight, 170) + 'px'; }
+
+function sendPrompt() {
+  const input = byId('prompt');
+  let prompt = input.value.trim();
+  if (!prompt && attachedFiles.length) {
+    prompt = 'Analyze the attached file(s): ' + attachedFiles.map(f => f.name).join(', ') + '. Summarize what they are, extract useful details if possible, and generate next steps.';
+  }
+  if (!prompt) { toast('Type a message or attach a file first'); return; }
+  const chat = currentChat();
+  if (chat.title === 'New chat') chat.title = prompt.slice(0, 58);
+  chat.messages.push({ role: 'user', content: prompt, model: 'You', time: now() });
+  input.value = '';
+  autoGrow(input);
+  renderChat();
+  setTimeout(() => answerPrompt(prompt, chat), 120);
+  save();
+}
+function answerPrompt(prompt, chat) {
+  const context = attachedFiles.map(f => `File: ${f.name} (${f.type}, ${f.size} bytes)\n${f.text || '[binary/PDF/image metadata only]'}`).join('\n\n');
+  const fullPrompt = context ? `${prompt}\n\nAttached context:\n${context}` : prompt;
+  if (state.mode === 'side' || state.mode === 'battle') {
+    const a = makeAnswer(fullPrompt, state.modelA || 'Random', 'A');
+    const b = makeAnswer(fullPrompt, state.modelB || 'Claude', 'B');
+    chat.messages.push({ type: 'duel', a, b, model: 'Arena comparison', time: now() });
+    makeFiles(prompt, `${a}\n\n--- Model B ---\n\n${b}`, chat.id, 'Arena Duel');
+  } else {
+    const ans = makeAnswer(fullPrompt, state.modelA || 'Random', '');
+    chat.messages.push({ role: 'assistant', content: ans, model: `Arena ${state.modelA || 'Random'}`, time: now() });
+    makeFiles(prompt, ans, chat.id, `Arena ${state.modelA || 'Random'}`);
+  }
+  attachedFiles = [];
+  byId('attachments').textContent = '';
+  save();
+  render();
+}
+function makeAnswer(prompt, model, slot) {
+  const lower = prompt.toLowerCase();
+  let head = `${slot ? `Model ${slot} — ` : ''}${model} response\n\n`;
+  if (state.mode === 'agent') head += 'Agent plan\n1. Understand the goal\n2. Break it into tasks\n3. Produce deliverables\n4. Save workspace files\n5. Suggest next action\n\n';
+  if (hasKannada(prompt)) return head + buildKannadaAnswer(prompt);
+  if (/attached context|attached file|file:|image|jpg|jpeg|png|pdf/.test(lower)) return head + buildFileAnalysis(prompt);
+  if (/article|essay|blog|write/.test(lower)) return head + `# Article: ${cleanTitle(prompt)}\n\n## Introduction\nArtificial intelligence is one of the most important technologies of the modern world. It helps software understand language, generate content, analyze data, automate work, and support human decision-making.\n\n## Main Benefits\n1. Productivity: AI completes repetitive tasks faster.\n2. Creativity: AI helps writers, designers, coders, and creators draft ideas.\n3. Learning: AI explains difficult topics in simple language and supports many languages.\n4. Business: AI improves customer support, analysis, planning, and automation.\n\n## Challenges\nAI can make mistakes, reflect bias, or miss context. Important outputs should be reviewed, especially in finance, health, law, and education.\n\n## Future\nAI assistants will become more useful for complex work, file generation, research, coding, and personal productivity.\n\n## Conclusion\nAI is best used as a partner that helps people think, create, and work faster while humans remain responsible for judgment and ethics.`;
+  if (/app|code|android|firebase|website|server/.test(lower)) return head + `## Build Plan\nGoal: ${prompt}\n\n### Architecture\n- Android/Web UI\n- Authentication\n- AI router/server\n- Database history\n- Workspace file generation\n- Export formats\n\n### Steps\n1. Design screens and navigation.\n2. Implement chat and model modes.\n3. Add server routing and fallback.\n4. Store chats and files.\n5. Test login, responses, history, and downloads.`;
+  if (/compare| vs |difference|battle/.test(lower)) return head + `## Comparison\nRequest: ${prompt}\n\n| Factor | Option A | Option B |\n|---|---|---|\n| Accuracy | Check source quality | Check source quality |\n| Speed | Measure response time | Measure response time |\n| Cost | Estimate usage | Estimate usage |\n| UX | Simple and clear | Flexible and powerful |\n\nRecommendation: choose the option that gives the best balance of accuracy, speed, cost, and user experience.`;
+  return head + `I understand your task:\n${prompt}\n\n## Best next steps\n1. Clarify the final output format.\n2. Break the task into smaller parts.\n3. Create a strong first draft.\n4. Review for accuracy and missing details.\n5. Export the final result from Workspace if needed.\n\nPractical answer: start with the most important requirement, keep the result simple, and improve it step by step.`;
+}
+
+
+function hasKannada(text) { return /[ಀ-೿]/.test(text); }
+function buildKannadaAnswer(prompt) {
+  return `# ಕನ್ನಡ ಪ್ರತಿಕ್ರಿಯೆ
+
+ನಿಮ್ಮ ಸಂದೇಶವನ್ನು ನಾನು ಅರ್ಥಮಾಡಿಕೊಂಡಿದ್ದೇನೆ:
+${prompt}
+
+## ಮುಖ್ಯ ಉತ್ತರ
+ಕನ್ನಡದಲ್ಲಿ ಕೆಲಸ ಮಾಡಲು ಈ ಅಪ್ಲಿಕೇಶನ್ ಈಗ ಸಿದ್ಧವಾಗಿದೆ. ನೀವು ಕನ್ನಡ ಅಕ್ಷರ, ಪದ, ವಾಕ್ಯ, ಲೇಖನ, ವರದಿ ಅಥವಾ ಯೋಜನೆ ಕೇಳಿದರೆ, Arena AI ಕನ್ನಡದಲ್ಲೇ ಉತ್ತರವನ್ನು ರಚಿಸುತ್ತದೆ.
+
+## ಮುಂದಿನ ಹಂತಗಳು
+1. ನೀವು ಬೇಕಾದ ವಿಷಯವನ್ನು ಕನ್ನಡದಲ್ಲಿ ಬರೆಯಿರಿ.
+2. ಬೇಕಾದರೆ ಫೈಲ್ ಅಥವಾ ಚಿತ್ರವನ್ನು ಜೋಡಿಸಿ.
+3. ಉತ್ತರ ಬಂದ ನಂತರ Workspace ತೆರೆಯಿರಿ.
+4. Markdown, TXT, HTML, JSON, YAML, CSV ಮತ್ತು PDF ರೂಪದಲ್ಲಿ ಫೈಲ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ.
+
+## ಉದಾಹರಣೆ
+ನೀವು “ಕನ್ನಡದಲ್ಲಿ AI ಬಗ್ಗೆ ಲೇಖನ ಬರೆಯಿರಿ” ಎಂದು ಕೇಳಿದರೆ, ಅಪ್ಲಿಕೇಶನ್ ಕನ್ನಡ ಲೇಖನ ಮತ್ತು PDF-ready ಫೈಲ್ ರಚಿಸುತ್ತದೆ.
+
+## ಸಾರಾಂಶ
+ಈ ಅಪ್ಲಿಕೇಶನ್ ಬಹುಭಾಷಾ ಬೆಂಬಲದೊಂದಿಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ ಮತ್ತು ಕನ್ನಡ ಪಠ್ಯವನ್ನು Workspace ನಲ್ಲಿ ಉಳಿಸುತ್ತದೆ.`;
+}
+
+function buildFileAnalysis(prompt) {
+  const files = attachedFiles.length ? attachedFiles : extractFilesFromPrompt(prompt);
+  const list = files.map((f, i) => `${i + 1}. ${f.name || f} ${f.type ? '(' + f.type + ', ' + f.size + ' bytes)' : ''}`).join('\n');
+  const hasImage = files.some(f => /image|jpg|jpeg|png|webp/i.test((f.type || '') + ' ' + (f.name || f)));
+  const hasPdf = files.some(f => /pdf/i.test((f.type || '') + ' ' + (f.name || f)));
+  let out = `# Attached file analysis\n\n## Files received\n${list || '- Attached file'}\n\n`;
+  if (hasImage) out += '## Image handling\nThe image was received by the app. In embedded offline mode I can use the file name, type, size, and any user instructions. For true pixel-level vision/OCR, deploy the included Arena server with a vision-capable provider such as Gemini or OpenAI.\n\n';
+  if (hasPdf) out += '## PDF handling\nThe PDF was received as a file. Text extraction works for text files in this embedded mode; full PDF text extraction is prepared through Workspace export/server architecture.\n\n';
+  out += '## Useful next steps\n1. Tell me what you want done with the file: summarize, extract text, compare, convert, or make a report.\n2. I generated workspace exports for this task.\n3. Open Workspace to download Markdown, TXT, HTML/PDF-ready, JSON, YAML, CSV, and PDF files.\n\n## Draft response\nBased on the attachment metadata, this looks like a user-provided file for analysis. I can create a report, checklist, summary, document, or conversion-ready output from your instructions.';
+  return out;
+}
+function extractFilesFromPrompt(prompt) {
+  const matches = String(prompt).match(/File: ([^\n]+)/g) || [];
+  return matches.map(m => m.replace(/^File: /, '').split(' (')[0]);
+}
+
+function cleanTitle(s) { return String(s).replace(/\s+/g, ' ').slice(0, 72); }
+
+function handleFiles(files) {
+  attachedFiles = [];
+  const list = Array.from(files || []);
+  if (!list.length) return;
+  let pending = list.length;
+  list.forEach(file => {
+    const item = { name: file.name, type: file.type || 'file', size: file.size, text: '' };
+    if (file.type.startsWith('text/') || /\.(txt|md|csv|json|xml|html|yaml|yml|kt|java|js|py|css|gradle)$/i.test(file.name)) {
+      const reader = new FileReader();
+      reader.onload = () => { item.text = String(reader.result).slice(0, 15000); attachedFiles.push(item); if (--pending === 0) showAttached(); };
+      reader.readAsText(file);
+    } else if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = () => { item.dataUrl = String(reader.result); attachedFiles.push(item); if (--pending === 0) showAttached(); };
+      reader.readAsDataURL(file);
+    } else { attachedFiles.push(item); if (--pending === 0) showAttached(); }
+  });
+}
+function showAttached() { byId('attachments').textContent = 'Attached: ' + attachedFiles.map(f => f.name).join(', ') + ' — text files are read; PDFs/images are added as metadata.'; }
+
+function makeFiles(prompt, answer, chatId, model) {
+  const title = cleanTitle(prompt) || 'Arena response';
+  const base = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 42) || 'arena-response';
+  const md = `# ${title}\n\nModel: ${model}\n\n## Prompt\n${prompt}\n\n## Response\n${answer}`;
+  const txt = `${title}\n\nModel: ${model}\n\nPrompt:\n${prompt}\n\nResponse:\n${answer}`;
+  const imageHtml = attachedFiles.filter(f => f.dataUrl).map(f => `<figure><img src="${f.dataUrl}" style="max-width:100%;border:1px solid #ddd;border-radius:12px"><figcaption>${esc(f.name)}</figcaption></figure>`).join('');
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{font-family:Arial;padding:32px;line-height:1.55}pre{white-space:pre-wrap}</style></head><body><h1>${esc(title)}</h1><p><b>Model:</b> ${esc(model)}</p>${imageHtml}<h2>Prompt</h2><p>${esc(prompt)}</p><h2>Response</h2><pre>${esc(answer)}</pre></body></html>`;
+  const json = JSON.stringify({ title, model, prompt, response: answer }, null, 2);
+  const yaml = `title: ${title}\nmodel: ${model}\nprompt: |\n  ${prompt.replace(/\n/g, '\n  ')}\nresponse: |\n  ${answer.replace(/\n/g, '\n  ')}`;
+  const csv = `field,value\ntitle,"${title.replace(/"/g, '""')}"\nmodel,"${model.replace(/"/g, '""')}"`;
+  addFile(`${base}.md`, 'Markdown', md, chatId);
+  addFile(`${base}.txt`, 'Plain text', txt, chatId);
+  addFile(`${base}.html`, 'HTML / PDF-ready', html, chatId, 'text/html');
+  addFile(`${base}.json`, 'JSON', json, chatId, 'application/json');
+  addFile(`${base}.yaml`, 'YAML', yaml, chatId);
+  addFile(`${base}.csv`, 'CSV', csv, chatId, 'text/csv');
+  addFile(`${base}.pdf`, 'PDF', `${title}\n\n${answer}`, chatId, 'application/pdf');
+  toast('Workspace files generated');
+}
+function addFile(name, type, content, chatId, mime = 'text/plain') { state.workspace.unshift({ id: id(), name, type, content, chatId, mime, created: now() }); }
+function renderWorkspace() {
+  const el = byId('workspaceList');
+  if (!state.workspace.length) { el.innerHTML = '<div class="empty">No files yet. Ask Arena to create an article, app plan, report, or comparison.</div>'; return; }
+  el.innerHTML = state.workspace.map(f => `<div class="file"><div class="file-title">${esc(f.name)}</div><div class="file-meta">${esc(f.type)} • ${esc(f.created)}</div><div class="file-actions"><button class="mini" data-copy="${f.id}">Copy</button><button class="mini" data-download="${f.id}">Download</button></div><div class="preview">${esc(String(f.content).slice(0, 1400))}</div></div>`).join('');
+  el.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copyFile(b.dataset.copy));
+  el.querySelectorAll('[data-download]').forEach(b => b.onclick = () => downloadFile(b.dataset.download));
+}
+function findFile(fid) { return state.workspace.find(f => f.id === fid); }
+function copyFile(fid) { const f = findFile(fid); if (!f) return; navigator.clipboard.writeText(f.content).then(() => toast('Copied ' + f.name)); }
+function toBase64Unicode(str) {
+  const bytes = new TextEncoder().encode(String(str));
+  let bin = '';
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin);
+}
+function downloadFile(fid) {
+  const f = findFile(fid); if (!f) return;
+  try {
+    if (window.ArenaAndroid) {
+      if (f.type === 'PDF') {
+        ArenaAndroid.savePdf(f.name, f.name.replace(/\.pdf$/i, ''), String(f.content));
+      } else {
+        ArenaAndroid.saveFileBase64(f.name, f.mime || 'text/plain', toBase64Unicode(f.content));
+      }
+      toast('Saving ' + f.name + ' to Downloads');
+      return;
+    }
+  } catch (e) { console.log(e); }
+  const blob = new Blob([f.content], { type: f.mime || 'text/plain' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = f.name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+}
+function makePdf(text) {
+  const lines = String(text).replace(/[()\\]/g, c => '\\' + c).split('\n').slice(0, 44).map((line, i) => `BT /F1 12 Tf 50 ${780 - i * 17} Td (${line.slice(0, 92)}) Tj ET`).join('\n');
+  const body = `1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj\n4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj\n5 0 obj << /Length ${lines.length} >> stream\n${lines}\nendstream endobj\n`;
+  return `%PDF-1.4\n${body}trailer << /Root 1 0 R >>\n%%EOF`;
+}
+function exportAll() { addFile('arena-workspace-export.json', 'Workspace export', JSON.stringify(state, null, 2), state.current || 'all', 'application/json'); renderWorkspace(); downloadFile(state.workspace[0].id); }
+
+byId('newChatSide').onclick = () => newChat(true);
+byId('newChatTop').onclick = () => newChat(true);
+byId('openSide').onclick = openSide;
+byId('overlay').onclick = () => { closeSide(); closeWorkspace(); };
+byId('openWorkspace').onclick = openWorkspace;
+byId('closeWorkspace').onclick = closeWorkspace;
+byId('signOut').onclick = signOut;
+byId('send').onclick = sendPrompt;
+byId('prompt').addEventListener('input', e => autoGrow(e.target));
+byId('prompt').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendPrompt(); } });
+byId('attach').onclick = () => byId('fileInput').click();
+byId('fileInput').onchange = e => handleFiles(e.target.files);
+byId('exportAll').onclick = exportAll;
+byId('clearWorkspace').onclick = () => { state.workspace = []; save(); renderWorkspace(); toast('Workspace cleared'); };
+document.querySelectorAll('.mode-item').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+
+if (!state.chats.length) newChat(false);
+render();
+
+</script>
+</body>
+</html>
