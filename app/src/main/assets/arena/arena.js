@@ -69,8 +69,11 @@ function autoGrow(t) { t.style.height = '50px'; t.style.height = Math.min(t.scro
 
 function sendPrompt() {
   const input = byId('prompt');
-  const prompt = input.value.trim();
-  if (!prompt) return;
+  let prompt = input.value.trim();
+  if (!prompt && attachedFiles.length) {
+    prompt = 'Analyze the attached file(s): ' + attachedFiles.map(f => f.name).join(', ') + '. Summarize what they are, extract useful details if possible, and generate next steps.';
+  }
+  if (!prompt) { toast('Type a message or attach a file first'); return; }
   const chat = currentChat();
   if (chat.title === 'New chat') chat.title = prompt.slice(0, 58);
   chat.messages.push({ role: 'user', content: prompt, model: 'You', time: now() });
@@ -102,11 +105,29 @@ function makeAnswer(prompt, model, slot) {
   const lower = prompt.toLowerCase();
   let head = `${slot ? `Model ${slot} — ` : ''}${model} response\n\n`;
   if (state.mode === 'agent') head += 'Agent plan\n1. Understand the goal\n2. Break it into tasks\n3. Produce deliverables\n4. Save workspace files\n5. Suggest next action\n\n';
+  if (/attached context|attached file|file:|image|jpg|jpeg|png|pdf/.test(lower)) return head + buildFileAnalysis(prompt);
   if (/article|essay|blog|write/.test(lower)) return head + `# Article: ${cleanTitle(prompt)}\n\n## Introduction\nArtificial intelligence is one of the most important technologies of the modern world. It helps software understand language, generate content, analyze data, automate work, and support human decision-making.\n\n## Main Benefits\n1. Productivity: AI completes repetitive tasks faster.\n2. Creativity: AI helps writers, designers, coders, and creators draft ideas.\n3. Learning: AI explains difficult topics in simple language and supports many languages.\n4. Business: AI improves customer support, analysis, planning, and automation.\n\n## Challenges\nAI can make mistakes, reflect bias, or miss context. Important outputs should be reviewed, especially in finance, health, law, and education.\n\n## Future\nAI assistants will become more useful for complex work, file generation, research, coding, and personal productivity.\n\n## Conclusion\nAI is best used as a partner that helps people think, create, and work faster while humans remain responsible for judgment and ethics.`;
   if (/app|code|android|firebase|website|server/.test(lower)) return head + `## Build Plan\nGoal: ${prompt}\n\n### Architecture\n- Android/Web UI\n- Authentication\n- AI router/server\n- Database history\n- Workspace file generation\n- Export formats\n\n### Steps\n1. Design screens and navigation.\n2. Implement chat and model modes.\n3. Add server routing and fallback.\n4. Store chats and files.\n5. Test login, responses, history, and downloads.`;
   if (/compare| vs |difference|battle/.test(lower)) return head + `## Comparison\nRequest: ${prompt}\n\n| Factor | Option A | Option B |\n|---|---|---|\n| Accuracy | Check source quality | Check source quality |\n| Speed | Measure response time | Measure response time |\n| Cost | Estimate usage | Estimate usage |\n| UX | Simple and clear | Flexible and powerful |\n\nRecommendation: choose the option that gives the best balance of accuracy, speed, cost, and user experience.`;
   return head + `I understand your task:\n${prompt}\n\n## Best next steps\n1. Clarify the final output format.\n2. Break the task into smaller parts.\n3. Create a strong first draft.\n4. Review for accuracy and missing details.\n5. Export the final result from Workspace if needed.\n\nPractical answer: start with the most important requirement, keep the result simple, and improve it step by step.`;
 }
+
+function buildFileAnalysis(prompt) {
+  const files = attachedFiles.length ? attachedFiles : extractFilesFromPrompt(prompt);
+  const list = files.map((f, i) => `${i + 1}. ${f.name || f} ${f.type ? '(' + f.type + ', ' + f.size + ' bytes)' : ''}`).join('\n');
+  const hasImage = files.some(f => /image|jpg|jpeg|png|webp/i.test((f.type || '') + ' ' + (f.name || f)));
+  const hasPdf = files.some(f => /pdf/i.test((f.type || '') + ' ' + (f.name || f)));
+  let out = `# Attached file analysis\n\n## Files received\n${list || '- Attached file'}\n\n`;
+  if (hasImage) out += '## Image handling\nThe image was received by the app. In embedded offline mode I can use the file name, type, size, and any user instructions. For true pixel-level vision/OCR, deploy the included Arena server with a vision-capable provider such as Gemini or OpenAI.\n\n';
+  if (hasPdf) out += '## PDF handling\nThe PDF was received as a file. Text extraction works for text files in this embedded mode; full PDF text extraction is prepared through Workspace export/server architecture.\n\n';
+  out += '## Useful next steps\n1. Tell me what you want done with the file: summarize, extract text, compare, convert, or make a report.\n2. I generated workspace exports for this task.\n3. Open Workspace to download Markdown, TXT, HTML/PDF-ready, JSON, YAML, CSV, and PDF files.\n\n## Draft response\nBased on the attachment metadata, this looks like a user-provided file for analysis. I can create a report, checklist, summary, document, or conversion-ready output from your instructions.';
+  return out;
+}
+function extractFilesFromPrompt(prompt) {
+  const matches = String(prompt).match(/File: ([^\n]+)/g) || [];
+  return matches.map(m => m.replace(/^File: /, '').split(' (')[0]);
+}
+
 function cleanTitle(s) { return String(s).replace(/\s+/g, ' ').slice(0, 72); }
 
 function handleFiles(files) {
@@ -120,6 +141,10 @@ function handleFiles(files) {
       const reader = new FileReader();
       reader.onload = () => { item.text = String(reader.result).slice(0, 15000); attachedFiles.push(item); if (--pending === 0) showAttached(); };
       reader.readAsText(file);
+    } else if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = () => { item.dataUrl = String(reader.result); attachedFiles.push(item); if (--pending === 0) showAttached(); };
+      reader.readAsDataURL(file);
     } else { attachedFiles.push(item); if (--pending === 0) showAttached(); }
   });
 }
@@ -130,7 +155,8 @@ function makeFiles(prompt, answer, chatId, model) {
   const base = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 42) || 'arena-response';
   const md = `# ${title}\n\nModel: ${model}\n\n## Prompt\n${prompt}\n\n## Response\n${answer}`;
   const txt = `${title}\n\nModel: ${model}\n\nPrompt:\n${prompt}\n\nResponse:\n${answer}`;
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{font-family:Arial;padding:32px;line-height:1.55}pre{white-space:pre-wrap}</style></head><body><h1>${esc(title)}</h1><p><b>Model:</b> ${esc(model)}</p><h2>Prompt</h2><p>${esc(prompt)}</p><h2>Response</h2><pre>${esc(answer)}</pre></body></html>`;
+  const imageHtml = attachedFiles.filter(f => f.dataUrl).map(f => `<figure><img src="${f.dataUrl}" style="max-width:100%;border:1px solid #ddd;border-radius:12px"><figcaption>${esc(f.name)}</figcaption></figure>`).join('');
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>body{font-family:Arial;padding:32px;line-height:1.55}pre{white-space:pre-wrap}</style></head><body><h1>${esc(title)}</h1><p><b>Model:</b> ${esc(model)}</p>${imageHtml}<h2>Prompt</h2><p>${esc(prompt)}</p><h2>Response</h2><pre>${esc(answer)}</pre></body></html>`;
   const json = JSON.stringify({ title, model, prompt, response: answer }, null, 2);
   const yaml = `title: ${title}\nmodel: ${model}\nprompt: |\n  ${prompt.replace(/\n/g, '\n  ')}\nresponse: |\n  ${answer.replace(/\n/g, '\n  ')}`;
   const csv = `field,value\ntitle,"${title.replace(/"/g, '""')}"\nmodel,"${model.replace(/"/g, '""')}"`;
