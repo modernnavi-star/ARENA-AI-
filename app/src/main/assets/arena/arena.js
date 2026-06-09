@@ -105,11 +105,36 @@ function makeAnswer(prompt, model, slot) {
   const lower = prompt.toLowerCase();
   let head = `${slot ? `Model ${slot} — ` : ''}${model} response\n\n`;
   if (state.mode === 'agent') head += 'Agent plan\n1. Understand the goal\n2. Break it into tasks\n3. Produce deliverables\n4. Save workspace files\n5. Suggest next action\n\n';
+  if (hasKannada(prompt)) return head + buildKannadaAnswer(prompt);
   if (/attached context|attached file|file:|image|jpg|jpeg|png|pdf/.test(lower)) return head + buildFileAnalysis(prompt);
   if (/article|essay|blog|write/.test(lower)) return head + `# Article: ${cleanTitle(prompt)}\n\n## Introduction\nArtificial intelligence is one of the most important technologies of the modern world. It helps software understand language, generate content, analyze data, automate work, and support human decision-making.\n\n## Main Benefits\n1. Productivity: AI completes repetitive tasks faster.\n2. Creativity: AI helps writers, designers, coders, and creators draft ideas.\n3. Learning: AI explains difficult topics in simple language and supports many languages.\n4. Business: AI improves customer support, analysis, planning, and automation.\n\n## Challenges\nAI can make mistakes, reflect bias, or miss context. Important outputs should be reviewed, especially in finance, health, law, and education.\n\n## Future\nAI assistants will become more useful for complex work, file generation, research, coding, and personal productivity.\n\n## Conclusion\nAI is best used as a partner that helps people think, create, and work faster while humans remain responsible for judgment and ethics.`;
   if (/app|code|android|firebase|website|server/.test(lower)) return head + `## Build Plan\nGoal: ${prompt}\n\n### Architecture\n- Android/Web UI\n- Authentication\n- AI router/server\n- Database history\n- Workspace file generation\n- Export formats\n\n### Steps\n1. Design screens and navigation.\n2. Implement chat and model modes.\n3. Add server routing and fallback.\n4. Store chats and files.\n5. Test login, responses, history, and downloads.`;
   if (/compare| vs |difference|battle/.test(lower)) return head + `## Comparison\nRequest: ${prompt}\n\n| Factor | Option A | Option B |\n|---|---|---|\n| Accuracy | Check source quality | Check source quality |\n| Speed | Measure response time | Measure response time |\n| Cost | Estimate usage | Estimate usage |\n| UX | Simple and clear | Flexible and powerful |\n\nRecommendation: choose the option that gives the best balance of accuracy, speed, cost, and user experience.`;
   return head + `I understand your task:\n${prompt}\n\n## Best next steps\n1. Clarify the final output format.\n2. Break the task into smaller parts.\n3. Create a strong first draft.\n4. Review for accuracy and missing details.\n5. Export the final result from Workspace if needed.\n\nPractical answer: start with the most important requirement, keep the result simple, and improve it step by step.`;
+}
+
+
+function hasKannada(text) { return /[ಀ-೿]/.test(text); }
+function buildKannadaAnswer(prompt) {
+  return `# ಕನ್ನಡ ಪ್ರತಿಕ್ರಿಯೆ
+
+ನಿಮ್ಮ ಸಂದೇಶವನ್ನು ನಾನು ಅರ್ಥಮಾಡಿಕೊಂಡಿದ್ದೇನೆ:
+${prompt}
+
+## ಮುಖ್ಯ ಉತ್ತರ
+ಕನ್ನಡದಲ್ಲಿ ಕೆಲಸ ಮಾಡಲು ಈ ಅಪ್ಲಿಕೇಶನ್ ಈಗ ಸಿದ್ಧವಾಗಿದೆ. ನೀವು ಕನ್ನಡ ಅಕ್ಷರ, ಪದ, ವಾಕ್ಯ, ಲೇಖನ, ವರದಿ ಅಥವಾ ಯೋಜನೆ ಕೇಳಿದರೆ, Arena AI ಕನ್ನಡದಲ್ಲೇ ಉತ್ತರವನ್ನು ರಚಿಸುತ್ತದೆ.
+
+## ಮುಂದಿನ ಹಂತಗಳು
+1. ನೀವು ಬೇಕಾದ ವಿಷಯವನ್ನು ಕನ್ನಡದಲ್ಲಿ ಬರೆಯಿರಿ.
+2. ಬೇಕಾದರೆ ಫೈಲ್ ಅಥವಾ ಚಿತ್ರವನ್ನು ಜೋಡಿಸಿ.
+3. ಉತ್ತರ ಬಂದ ನಂತರ Workspace ತೆರೆಯಿರಿ.
+4. Markdown, TXT, HTML, JSON, YAML, CSV ಮತ್ತು PDF ರೂಪದಲ್ಲಿ ಫೈಲ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ.
+
+## ಉದಾಹರಣೆ
+ನೀವು “ಕನ್ನಡದಲ್ಲಿ AI ಬಗ್ಗೆ ಲೇಖನ ಬರೆಯಿರಿ” ಎಂದು ಕೇಳಿದರೆ, ಅಪ್ಲಿಕೇಶನ್ ಕನ್ನಡ ಲೇಖನ ಮತ್ತು PDF-ready ಫೈಲ್ ರಚಿಸುತ್ತದೆ.
+
+## ಸಾರಾಂಶ
+ಈ ಅಪ್ಲಿಕೇಶನ್ ಬಹುಭಾಷಾ ಬೆಂಬಲದೊಂದಿಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ ಮತ್ತು ಕನ್ನಡ ಪಠ್ಯವನ್ನು Workspace ನಲ್ಲಿ ಉಳಿಸುತ್ತದೆ.`;
 }
 
 function buildFileAnalysis(prompt) {
@@ -166,7 +191,7 @@ function makeFiles(prompt, answer, chatId, model) {
   addFile(`${base}.json`, 'JSON', json, chatId, 'application/json');
   addFile(`${base}.yaml`, 'YAML', yaml, chatId);
   addFile(`${base}.csv`, 'CSV', csv, chatId, 'text/csv');
-  addFile(`${base}.pdf`, 'PDF', makePdf(`${title}\n\n${answer}`), chatId, 'application/pdf');
+  addFile(`${base}.pdf`, 'PDF', `${title}\n\n${answer}`, chatId, 'application/pdf');
   toast('Workspace files generated');
 }
 function addFile(name, type, content, chatId, mime = 'text/plain') { state.workspace.unshift({ id: id(), name, type, content, chatId, mime, created: now() }); }
@@ -179,7 +204,28 @@ function renderWorkspace() {
 }
 function findFile(fid) { return state.workspace.find(f => f.id === fid); }
 function copyFile(fid) { const f = findFile(fid); if (!f) return; navigator.clipboard.writeText(f.content).then(() => toast('Copied ' + f.name)); }
-function downloadFile(fid) { const f = findFile(fid); if (!f) return; const blob = new Blob([f.content], { type: f.mime || 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = f.name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800); }
+function toBase64Unicode(str) {
+  const bytes = new TextEncoder().encode(String(str));
+  let bin = '';
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin);
+}
+function downloadFile(fid) {
+  const f = findFile(fid); if (!f) return;
+  try {
+    if (window.ArenaAndroid) {
+      if (f.type === 'PDF') {
+        ArenaAndroid.savePdf(f.name, f.name.replace(/\.pdf$/i, ''), String(f.content));
+      } else {
+        ArenaAndroid.saveFileBase64(f.name, f.mime || 'text/plain', toBase64Unicode(f.content));
+      }
+      toast('Saving ' + f.name + ' to Downloads');
+      return;
+    }
+  } catch (e) { console.log(e); }
+  const blob = new Blob([f.content], { type: f.mime || 'text/plain' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = f.name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+}
 function makePdf(text) {
   const lines = String(text).replace(/[()\\]/g, c => '\\' + c).split('\n').slice(0, 44).map((line, i) => `BT /F1 12 Tf 50 ${780 - i * 17} Td (${line.slice(0, 92)}) Tj ET`).join('\n');
   const body = `1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj\n4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj\n5 0 obj << /Length ${lines.length} >> stream\n${lines}\nendstream endobj\n`;
