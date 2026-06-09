@@ -105,7 +105,7 @@ function makeAnswer(prompt, model, slot) {
   const lower = prompt.toLowerCase();
   let head = `${slot ? `Model ${slot} — ` : ''}${model} response\n\n`;
   if (state.mode === 'agent') head += 'Agent plan\n1. Understand the goal\n2. Break it into tasks\n3. Produce deliverables\n4. Save workspace files\n5. Suggest next action\n\n';
-  if (hasKannada(prompt)) return head + buildKannadaAnswer(prompt);
+  if (isKannadaRequest(prompt)) return head + buildKannadaAnswer(prompt);
   if (/attached context|attached file|file:|image|jpg|jpeg|png|pdf/.test(lower)) return head + buildFileAnalysis(prompt);
   if (/article|essay|blog|write/.test(lower)) return head + `# Article: ${cleanTitle(prompt)}\n\n## Introduction\nArtificial intelligence is one of the most important technologies of the modern world. It helps software understand language, generate content, analyze data, automate work, and support human decision-making.\n\n## Main Benefits\n1. Productivity: AI completes repetitive tasks faster.\n2. Creativity: AI helps writers, designers, coders, and creators draft ideas.\n3. Learning: AI explains difficult topics in simple language and supports many languages.\n4. Business: AI improves customer support, analysis, planning, and automation.\n\n## Challenges\nAI can make mistakes, reflect bias, or miss context. Important outputs should be reviewed, especially in finance, health, law, and education.\n\n## Future\nAI assistants will become more useful for complex work, file generation, research, coding, and personal productivity.\n\n## Conclusion\nAI is best used as a partner that helps people think, create, and work faster while humans remain responsible for judgment and ethics.`;
   if (/app|code|android|firebase|website|server/.test(lower)) return head + `## Build Plan\nGoal: ${prompt}\n\n### Architecture\n- Android/Web UI\n- Authentication\n- AI router/server\n- Database history\n- Workspace file generation\n- Export formats\n\n### Steps\n1. Design screens and navigation.\n2. Implement chat and model modes.\n3. Add server routing and fallback.\n4. Store chats and files.\n5. Test login, responses, history, and downloads.`;
@@ -114,15 +114,53 @@ function makeAnswer(prompt, model, slot) {
 }
 
 
-function hasKannada(text) { return /[ಀ-೿]/.test(text); }
+function isKannadaRequest(text) {
+  return /[ಀ-೿]/.test(text) || /kannada|ಕನ್ನಡ|letter in kannada|kannada letter/i.test(text);
+}
 function buildKannadaAnswer(prompt) {
+  const wantsLetter = /letter|ಪತ್ರ|application|request/i.test(prompt);
+  if (wantsLetter) {
+    return `# ಕನ್ನಡ ಪತ್ರ
+
+## ವಿಷಯ: ಕೃತಕ ಬುದ್ಧಿಮತ್ತೆ (AI) ಕುರಿತು ಮಾಹಿತಿ
+
+ಕಳುಹಿಸುವವರು,
+ನಿಮ್ಮ ಹೆಸರು,
+ನಿಮ್ಮ ವಿಳಾಸ,
+ದಿನಾಂಕ: ${new Date().toLocaleDateString()}
+
+ಸ್ವೀಕರಿಸುವವರು,
+ಗೌರವಾನ್ವಿತ ಅಧಿಕಾರಿಗಳಿಗೆ / ಶಿಕ್ಷಕರಿಗೆ,
+
+ಮಾನ್ಯರೇ,
+
+ವಿಷಯಕ್ಕೆ ಸಂಬಂಧಿಸಿದಂತೆ, ಕೃತಕ ಬುದ್ಧಿಮತ್ತೆ ಅಂದರೆ Artificial Intelligence ಇಂದಿನ ತಂತ್ರಜ್ಞಾನ ಜಗತ್ತಿನಲ್ಲಿ ಅತ್ಯಂತ ಪ್ರಮುಖ ಪಾತ್ರ ವಹಿಸುತ್ತಿದೆ. AI ಬಳಸಿ ಮನುಷ್ಯರು ಬರವಣಿಗೆ, ಅಧ್ಯಯನ, ಸಂಶೋಧನೆ, ಅನುವಾದ, ಕೋಡಿಂಗ್, ಡೇಟಾ ವಿಶ್ಲೇಷಣೆ ಮತ್ತು ದಿನನಿತ್ಯದ ಕೆಲಸಗಳನ್ನು ಹೆಚ್ಚು ವೇಗವಾಗಿ ಮತ್ತು ಸುಲಭವಾಗಿ ಮಾಡಬಹುದು.
+
+AI ಯ ಪ್ರಮುಖ ಪ್ರಯೋಜನಗಳು ಹೀಗಿವೆ:
+1. ಕೆಲಸದ ವೇಗ ಮತ್ತು ಉತ್ಪಾದಕತೆ ಹೆಚ್ಚುತ್ತದೆ.
+2. ವಿದ್ಯಾರ್ಥಿಗಳಿಗೆ ಕಠಿಣ ವಿಷಯಗಳನ್ನು ಸರಳವಾಗಿ ಅರ್ಥಮಾಡಿಕೊಳ್ಳಲು ಸಹಾಯವಾಗುತ್ತದೆ.
+3. ವ್ಯವಹಾರಗಳಲ್ಲಿ ಗ್ರಾಹಕ ಸೇವೆ, ಯೋಜನೆ ಮತ್ತು ಮಾಹಿತಿ ವಿಶ್ಲೇಷಣೆಗೆ ಸಹಾಯ ಮಾಡುತ್ತದೆ.
+4. ಸೃಜನಾತ್ಮಕ ಬರವಣಿಗೆ, ವಿನ್ಯಾಸ ಮತ್ತು ಅಪ್ಲಿಕೇಶನ್ ಅಭಿವೃದ್ಧಿಯಲ್ಲಿ ಸಹಕಾರ ನೀಡುತ್ತದೆ.
+
+ಆದರೆ AI ಬಳಸುವಾಗ ಜಾಗರೂಕತೆಯೂ ಅಗತ್ಯ. AI ನೀಡುವ ಮಾಹಿತಿ ಯಾವಾಗಲೂ ನಿಖರವಾಗಿರುತ್ತದೆ ಎಂದು ಊಹಿಸಬಾರದು. ಮುಖ್ಯ ನಿರ್ಧಾರಗಳಿಗಾಗಿ ಮಾಹಿತಿಯನ್ನು ಪರಿಶೀಲಿಸಿ, ನೈತಿಕವಾಗಿ ಮತ್ತು ಜವಾಬ್ದಾರಿಯಿಂದ ಬಳಸಬೇಕು.
+
+ಆದ್ದರಿಂದ, AI ಒಂದು ಶಕ್ತಿಶಾಲಿ ಸಹಾಯಕ ತಂತ್ರಜ್ಞಾನವಾಗಿದ್ದು, ಸರಿಯಾಗಿ ಬಳಸಿದರೆ ಶಿಕ್ಷಣ, ಉದ್ಯಮ, ತಂತ್ರಜ್ಞಾನ ಮತ್ತು ಸಮಾಜದ ಅಭಿವೃದ್ಧಿಗೆ ಬಹಳ ಉಪಯುಕ್ತವಾಗುತ್ತದೆ.
+
+ಧನ್ಯವಾದಗಳು.
+
+ನಿಮ್ಮ ವಿಶ್ವಾಸಿ,
+ನಿಮ್ಮ ಹೆಸರು
+
+## Workspace ಸೂಚನೆ
+ಈ ಉತ್ತರಕ್ಕಾಗಿ Markdown, TXT, HTML/PDF-ready, JSON, YAML, CSV ಮತ್ತು PDF ಫೈಲ್‌ಗಳನ್ನು Workspace ನಲ್ಲಿ ರಚಿಸಲಾಗಿದೆ.`;
+  }
   return `# ಕನ್ನಡ ಪ್ರತಿಕ್ರಿಯೆ
 
 ನಿಮ್ಮ ಸಂದೇಶವನ್ನು ನಾನು ಅರ್ಥಮಾಡಿಕೊಂಡಿದ್ದೇನೆ:
 ${prompt}
 
 ## ಮುಖ್ಯ ಉತ್ತರ
-ಕನ್ನಡದಲ್ಲಿ ಕೆಲಸ ಮಾಡಲು ಈ ಅಪ್ಲಿಕೇಶನ್ ಈಗ ಸಿದ್ಧವಾಗಿದೆ. ನೀವು ಕನ್ನಡ ಅಕ್ಷರ, ಪದ, ವಾಕ್ಯ, ಲೇಖನ, ವರದಿ ಅಥವಾ ಯೋಜನೆ ಕೇಳಿದರೆ, Arena AI ಕನ್ನಡದಲ್ಲೇ ಉತ್ತರವನ್ನು ರಚಿಸುತ್ತದೆ.
+ಕನ್ನಡದಲ್ಲಿ ಕೆಲಸ ಮಾಡಲು ಈ ಅಪ್ಲಿಕೇಶನ್ ಸಿದ್ಧವಾಗಿದೆ. ನೀವು ಕನ್ನಡ ಅಕ್ಷರ, ಪದ, ವಾಕ್ಯ, ಲೇಖನ, ವರದಿ ಅಥವಾ ಯೋಜನೆ ಕೇಳಿದರೆ, Arena AI ಕನ್ನಡದಲ್ಲೇ ಉತ್ತರವನ್ನು ರಚಿಸುತ್ತದೆ.
 
 ## ಮುಂದಿನ ಹಂತಗಳು
 1. ನೀವು ಬೇಕಾದ ವಿಷಯವನ್ನು ಕನ್ನಡದಲ್ಲಿ ಬರೆಯಿರಿ.
@@ -131,12 +169,11 @@ ${prompt}
 4. Markdown, TXT, HTML, JSON, YAML, CSV ಮತ್ತು PDF ರೂಪದಲ್ಲಿ ಫೈಲ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ.
 
 ## ಉದಾಹರಣೆ
-ನೀವು “ಕನ್ನಡದಲ್ಲಿ AI ಬಗ್ಗೆ ಲೇಖನ ಬರೆಯಿರಿ” ಎಂದು ಕೇಳಿದರೆ, ಅಪ್ಲಿಕೇಶನ್ ಕನ್ನಡ ಲೇಖನ ಮತ್ತು PDF-ready ಫೈಲ್ ರಚಿಸುತ್ತದೆ.
+“ಕನ್ನಡದಲ್ಲಿ AI ಬಗ್ಗೆ ಲೇಖನ ಬರೆಯಿರಿ” ಎಂದು ಕೇಳಿದರೆ, ಅಪ್ಲಿಕೇಶನ್ ಕನ್ನಡ ಲೇಖನ ಮತ್ತು PDF-ready ಫೈಲ್ ರಚಿಸುತ್ತದೆ.
 
 ## ಸಾರಾಂಶ
 ಈ ಅಪ್ಲಿಕೇಶನ್ ಬಹುಭಾಷಾ ಬೆಂಬಲದೊಂದಿಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ ಮತ್ತು ಕನ್ನಡ ಪಠ್ಯವನ್ನು Workspace ನಲ್ಲಿ ಉಳಿಸುತ್ತದೆ.`;
 }
-
 function buildFileAnalysis(prompt) {
   const files = attachedFiles.length ? attachedFiles : extractFilesFromPrompt(prompt);
   const list = files.map((f, i) => `${i + 1}. ${f.name || f} ${f.type ? '(' + f.type + ', ' + f.size + ' bytes)' : ''}`).join('\n');
