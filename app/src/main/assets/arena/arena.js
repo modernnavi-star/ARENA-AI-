@@ -58,13 +58,23 @@ function renderChat() {
     return;
   }
   el.innerHTML = chat.messages.map(m => {
-    if (m.type === 'duel') return `<div class="duel"><div class="duel-card">${format(m.a)}<button class="vote">Vote A</button></div><div class="duel-card">${format(m.b)}<button class="vote">Vote B</button></div></div>`;
-    return `<div class="msg ${m.role}"><div class="bubble">${format(m.content)}<div class="tag">${esc(m.model || '')}</div></div></div>`;
+    if (m.type === 'duel') return `<div class="duel"><div class="duel-card">${format(m.a)}<button class="vote">Vote A</button></div><div class="duel-card">${format(m.b)}<button class="vote">Vote B</button></div></div>${renderArtifactCard(m)}`;
+    return `<div class="msg ${m.role}"><div class="bubble">${format(m.content)}<div class="tag">${esc(m.model || '')}</div></div></div>${renderArtifactCard(m)}`;
   }).join('');
   el.querySelectorAll('.vote').forEach(b => b.onclick = () => toast('Vote saved'));
+  el.querySelectorAll('[data-download]').forEach(b => b.onclick = () => downloadFile(b.dataset.download));
   el.scrollTop = el.scrollHeight;
 }
 function format(s) { return esc(s).replace(/\n/g, '<br>'); }
+
+function renderArtifactCard(message) {
+  if (!message || !message.artifacts || !message.artifacts.length) return '';
+  const files = message.artifacts.map(findFile).filter(Boolean);
+  if (!files.length) return '';
+  const primary = files.find(f => f.name.endsWith('.md')) || files[0];
+  const fileList = files.map(f => `<button class="mini" data-download="${f.id}">⬇ ${esc(f.name)}</button>`).join('');
+  return `<div class="artifact-card"><div class="artifact-head"><div><b>📄 Workspace artifact generated</b><small>${files.length} files • Markdown, PDF, HTML, JSON, YAML, CSV</small></div><button class="mini" onclick="openWorkspace()">Open Workspace</button></div><pre>${esc(String(primary.content).slice(0, 1800))}</pre><div class="file-actions">${fileList}</div></div>`;
+}
 function autoGrow(t) { t.style.height = '50px'; t.style.height = Math.min(t.scrollHeight, 170) + 'px'; }
 
 function sendPrompt() {
@@ -89,12 +99,12 @@ function answerPrompt(prompt, chat) {
   if (state.mode === 'side' || state.mode === 'battle') {
     const a = makeAnswer(fullPrompt, state.modelA || 'Random', 'A');
     const b = makeAnswer(fullPrompt, state.modelB || 'Claude', 'B');
-    chat.messages.push({ type: 'duel', a, b, model: 'Arena comparison', time: now() });
-    makeFiles(prompt, `${a}\n\n--- Model B ---\n\n${b}`, chat.id, 'Arena Duel');
+    const files = makeFiles(prompt, `${a}\n\n--- Model B ---\n\n${b}`, chat.id, 'Arena Duel');
+    chat.messages.push({ type: 'duel', a, b, model: 'Arena comparison', time: now(), artifacts: files.map(f => f.id) });
   } else {
     const ans = makeAnswer(fullPrompt, state.modelA || 'Random', '');
-    chat.messages.push({ role: 'assistant', content: ans, model: `Arena ${state.modelA || 'Random'}`, time: now() });
-    makeFiles(prompt, ans, chat.id, `Arena ${state.modelA || 'Random'}`);
+    const files = makeFiles(prompt, ans, chat.id, `Arena ${state.modelA || 'Random'}`);
+    chat.messages.push({ role: 'assistant', content: ans, model: `Arena ${state.modelA || 'Random'}`, time: now(), artifacts: files.map(f => f.id) });
   }
   attachedFiles = [];
   byId('attachments').textContent = '';
@@ -222,16 +232,18 @@ function makeFiles(prompt, answer, chatId, model) {
   const json = JSON.stringify({ title, model, prompt, response: answer }, null, 2);
   const yaml = `title: ${title}\nmodel: ${model}\nprompt: |\n  ${prompt.replace(/\n/g, '\n  ')}\nresponse: |\n  ${answer.replace(/\n/g, '\n  ')}`;
   const csv = `field,value\ntitle,"${title.replace(/"/g, '""')}"\nmodel,"${model.replace(/"/g, '""')}"`;
-  addFile(`${base}.md`, 'Markdown', md, chatId);
-  addFile(`${base}.txt`, 'Plain text', txt, chatId);
-  addFile(`${base}.html`, 'HTML / PDF-ready', html, chatId, 'text/html');
-  addFile(`${base}.json`, 'JSON', json, chatId, 'application/json');
-  addFile(`${base}.yaml`, 'YAML', yaml, chatId);
-  addFile(`${base}.csv`, 'CSV', csv, chatId, 'text/csv');
-  addFile(`${base}.pdf`, 'PDF', `${title}\n\n${answer}`, chatId, 'application/pdf');
+  const files = [];
+  files.push(addFile(`${base}.md`, 'Markdown', md, chatId));
+  files.push(addFile(`${base}.txt`, 'Plain text', txt, chatId));
+  files.push(addFile(`${base}.html`, 'HTML / PDF-ready', html, chatId, 'text/html'));
+  files.push(addFile(`${base}.json`, 'JSON', json, chatId, 'application/json'));
+  files.push(addFile(`${base}.yaml`, 'YAML', yaml, chatId));
+  files.push(addFile(`${base}.csv`, 'CSV', csv, chatId, 'text/csv'));
+  files.push(addFile(`${base}.pdf`, 'PDF', `${title}\n\n${answer}`, chatId, 'application/pdf'));
   toast('Workspace files generated');
+  return files;
 }
-function addFile(name, type, content, chatId, mime = 'text/plain') { state.workspace.unshift({ id: id(), name, type, content, chatId, mime, created: now() }); }
+function addFile(name, type, content, chatId, mime = 'text/plain') { const file = { id: id(), name, type, content, chatId, mime, created: now() }; state.workspace.unshift(file); return file; }
 function renderWorkspace() {
   const el = byId('workspaceList');
   if (!state.workspace.length) { el.innerHTML = '<div class="empty">No files yet. Ask Arena to create an article, app plan, report, or comparison.</div>'; return; }
