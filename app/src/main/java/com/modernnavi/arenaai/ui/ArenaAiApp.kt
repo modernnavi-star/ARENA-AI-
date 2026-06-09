@@ -95,17 +95,9 @@ fun ArenaAiApp(viewModel: ArenaViewModel) {
     if (state.currentUser == null) {
         SignInScreen()
     } else {
-        HomeScaffold(
+        WebArenaScreen(
             state = state,
-            onInputChange = viewModel::setInput,
-            onSend = viewModel::sendPrompt,
-            onModeChange = viewModel::setMode,
-            onModelChange = viewModel::setModelChoice,
-            onSelectChat = viewModel::selectChat,
-            onNewChat = viewModel::newChat,
-            onDeleteChat = viewModel::deleteChat,
-            onSignOut = viewModel::signOut,
-            onClearError = viewModel::clearError
+            onSignOut = viewModel::signOut
         )
     }
 }
