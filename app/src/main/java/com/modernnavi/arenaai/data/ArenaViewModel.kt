@@ -408,7 +408,7 @@ class ArenaViewModel : ViewModel() {
             .replace("&", "&amp;")
             .replace("<", "&lt;")
             .replace(">", "&gt;")
-            .replace(""", "&quot;")
+            .replace("\"", "&quot;")
     }
 
     private fun localModelName(mode: ArenaMode, selectedModel: AiModelChoice): String {
