@@ -182,3 +182,22 @@ users/{uid}/chats/{chatId}/messages/{messageId}
 - Add export/delete-account flows.
 - Add image/file prompt support.
 - Add subscription/rate limits.
+
+## Complete Arena server included
+
+The repository now includes both sides of the app:
+
+- Android client
+- Firebase Functions Arena server
+- Firestore rules
+- Workspace export system
+- Manual deploy workflow
+
+See:
+
+```text
+docs/ARCHITECTURE.md
+.github/workflows/deploy-firebase.yml
+```
+
+If AI provider API keys are not configured, the server and Android app both include an embedded Arena fallback engine so the app still responds and exports files instead of failing.

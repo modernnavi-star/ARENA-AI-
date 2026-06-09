@@ -10,15 +10,13 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == userId;
     }
 
+    // Complete per-user tree: profile, chats, messages, workspace artifacts,
+    // preferences, votes, and future Arena data all stay under users/{uid}.
     match /users/{userId} {
       allow read, create, update, delete: if owns(userId);
 
-      match /chats/{chatId} {
+      match /{document=**} {
         allow read, create, update, delete: if owns(userId);
-
-        match /messages/{messageId} {
-          allow read, create, update, delete: if owns(userId);
-        }
       }
     }
   }

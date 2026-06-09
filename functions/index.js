@@ -86,6 +86,8 @@ exports.sendArenaPrompt = onCall(
       mode,
     }, { merge: true });
 
+    await saveWorkspaceArtifacts(userRef, chatRef.id, prompt, answerPayload.answer, mode, answerPayload.modelUsed);
+
     return {
       chatId: chatRef.id,
       answer: answerPayload.answer,
@@ -193,32 +195,27 @@ async function runDuel(messages, requestedModel = "random") {
 
 function chooseProvider(providers, requestedModel) {
   if (!requestedModel || requestedModel === "random") return pickRandom(providers);
-  return providers.find((provider) => provider.id === requestedModel) || null;
+  return providers.find((provider) => provider.id === requestedModel) || {
+    id: "local",
+    label: `Arena Embedded ${requestedModel}`,
+    model: `arena-embedded-${requestedModel}`,
+    requestedModel,
+  };
 }
 
+
 function missingProviderResponse(requestedModel) {
-  const labels = {
-    gemini: "Gemini",
-    openai: "OpenAI",
-    anthropic: "Claude",
-    mistral: "Mistral",
+  const provider = {
+    id: "local",
+    label: `Arena Embedded ${requestedModel || "local"}`,
+    model: `arena-embedded-${requestedModel || "local"}`,
   };
-  const label = labels[requestedModel] || requestedModel;
-  return {
-    answer: [
-      `${label} is selected, but that provider is not configured on the backend yet.`,
-      "",
-      "Add the matching Firebase Functions environment variable, then deploy functions again:",
-      "GEMINI_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, or MISTRAL_API_KEY.",
-      "",
-      "You can switch back to Random to use any provider that is already configured."
-    ].join("\n"),
-    modelUsed: "Setup Assistant",
-    candidates: [],
-  };
+  const response = callEmbeddedArena(provider, [{ role: "user", content: "Provider fallback" }]);
+  return { answer: response.content, modelUsed: response.model, candidates: [] };
 }
 
 function configuredProviders() {
+
   const providers = [];
   if (process.env.GEMINI_API_KEY) {
     providers.push({ id: "gemini", label: "Gemini", model: "gemini-1.5-flash", key: process.env.GEMINI_API_KEY });
@@ -234,7 +231,7 @@ function configuredProviders() {
   }
 
   if (!providers.length) {
-    providers.push({ id: "setup", label: "Local Setup Assistant", model: "setup-mode" });
+    providers.push({ id: "local", label: "Arena Embedded", model: "arena-embedded-local" });
   }
   return providers;
 }
@@ -249,8 +246,10 @@ async function callProvider(provider, messages) {
       return callAnthropic(provider, messages);
     case "mistral":
       return callMistral(provider, messages);
+    case "local":
+      return callEmbeddedArena(provider, messages);
     default:
-      return callSetupAssistant(messages);
+      return callEmbeddedArena(provider, messages);
   }
 }
 
@@ -314,19 +313,120 @@ async function callMistral(provider, messages) {
   return { model: `Mistral ${provider.model}`, content: text || "Mistral returned an empty response." };
 }
 
-function callSetupAssistant(messages) {
+function callEmbeddedArena(provider, messages) {
   const lastPrompt = messages[messages.length - 1]?.content || "your prompt";
   return {
-    model: "Local Setup Assistant",
-    content: [
-      "Arena AI backend is running, but no AI provider API key is configured yet.",
-      "",
-      "To enable random AI routing, set one or more environment variables in Firebase Functions:",
-      "GEMINI_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, or MISTRAL_API_KEY.",
-      "",
-      `Your latest prompt was saved for history/backup: ${lastPrompt.slice(0, 500)}`
-    ].join("\n"),
+    model: provider.model || "arena-embedded-local",
+    content: buildEmbeddedArenaAnswer(lastPrompt, provider.label || "Arena Embedded"),
   };
+}
+
+function buildEmbeddedArenaAnswer(prompt, label) {
+  const lower = prompt.toLowerCase();
+  if (["article", "blog", "essay", "write"].some((word) => lower.includes(word))) {
+    return [
+      `${label} response`,
+      "",
+      `# ${makeTitle(prompt)}`,
+      "",
+      "## Introduction",
+      "Artificial intelligence, or AI, is one of the most important technologies in the modern world. It helps computers perform tasks that usually require human intelligence, such as understanding language, generating content, recognizing images, solving problems, and making predictions.",
+      "",
+      "## Benefits",
+      "1. AI improves productivity by automating repetitive work.",
+      "2. AI supports learning by explaining complex topics in simple language.",
+      "3. AI helps businesses analyze data and improve customer support.",
+      "4. AI assists creators, developers, writers, and researchers with faster drafting and planning.",
+      "",
+      "## Challenges",
+      "AI can make mistakes, reflect bias, or miss important context. For important decisions, people should verify AI output and use it responsibly.",
+      "",
+      "## Future",
+      "The future of AI will include stronger assistants, better automation, improved education tools, and more personalized software experiences.",
+      "",
+      "## Conclusion",
+      "AI is most powerful when it works with humans. Used carefully, it can improve creativity, productivity, learning, and decision-making."
+    ].join("\n");
+  }
+  if (["code", "app", "android", "kotlin", "firebase"].some((word) => lower.includes(word))) {
+    return [
+      `${label} response`,
+      "",
+      "## Implementation plan",
+      `Goal: ${prompt}`,
+      "",
+      "1. Define the user flow and screens.",
+      "2. Build the UI first.",
+      "3. Add authentication and database storage.",
+      "4. Route AI calls through a secure backend.",
+      "5. Add history, workspace exports, and error fallback.",
+      "6. Test login, sending, saving, and export behavior."
+    ].join("\n");
+  }
+  return [
+    `${label} response`,
+    "",
+    `I understand your request: ${prompt}`,
+    "",
+    "## Best answer",
+    "Break the task into clear sections, produce a practical first result, then refine it for accuracy and usefulness.",
+    "",
+    "## Next steps",
+    "1. Clarify the final output format.",
+    "2. Draft the core answer.",
+    "3. Add examples or details.",
+    "4. Review and improve.",
+    "5. Export the result if needed."
+  ].join("\n");
+}
+
+async function saveWorkspaceArtifacts(userRef, chatId, prompt, answer, mode, modelUsed) {
+  const artifacts = buildWorkspaceArtifacts(chatId, prompt, answer, mode, modelUsed);
+  const batch = db.batch();
+  const artifactsRef = userRef.collection("artifacts");
+  artifacts.forEach((artifact) => {
+    const ref = artifactsRef.doc();
+    batch.set(ref, {
+      ...artifact,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+  await batch.commit();
+}
+
+function buildWorkspaceArtifacts(chatId, prompt, answer, mode, modelUsed) {
+  const title = makeTitle(prompt);
+  const baseName = makeFileBaseName(prompt);
+  const markdown = [
+    `# ${title}`,
+    "",
+    `**Mode:** ${mode}`,
+    `**Model:** ${modelUsed}`,
+    "**Language:** Auto / multilingual",
+    "",
+    "## Prompt",
+    prompt,
+    "",
+    "## Response",
+    answer,
+  ].join("\n");
+  const text = [title, `Mode: ${mode}`, `Model: ${modelUsed}`, "", "Prompt:", prompt, "", "Response:", answer].join("\n");
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><style>body{font-family:Arial,sans-serif;line-height:1.55;padding:32px;color:#111827}h1{color:#4c1d95}.meta{color:#475569;border-left:4px solid #8b5cf6;padding-left:12px}pre{white-space:pre-wrap;font-family:Arial,sans-serif}</style></head><body><h1>${escapeHtml(title)}</h1><p class="meta"><b>Mode:</b> ${escapeHtml(mode)}<br><b>Model:</b> ${escapeHtml(modelUsed)}<br><b>Format:</b> Print this page to save as PDF.</p><h2>Prompt</h2><p>${escapeHtml(prompt)}</p><h2>Response</h2><pre>${escapeHtml(answer)}</pre></body></html>`;
+  const json = JSON.stringify({ title, mode, model: modelUsed, prompt, response: answer }, null, 2);
+  return [
+    { fileName: `${baseName}.md`, fileType: "Markdown", content: markdown, chatId },
+    { fileName: `${baseName}.txt`, fileType: "Plain text", content: text, chatId },
+    { fileName: `${baseName}.html`, fileType: "HTML / PDF-ready", content: html, chatId },
+    { fileName: `${baseName}.json`, fileType: "JSON", content: json, chatId },
+  ];
+}
+
+function makeFileBaseName(prompt) {
+  return makeTitle(prompt).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "arena-response";
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 async function postJson(url, body, headers = {}) {
