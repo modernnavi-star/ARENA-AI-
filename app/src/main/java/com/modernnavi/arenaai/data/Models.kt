@@ -32,10 +32,20 @@ data class ChatMessage(
     val createdAtMillis: Long
 )
 
+data class WorkspaceArtifact(
+    val id: String,
+    val fileName: String,
+    val fileType: String,
+    val content: String,
+    val chatId: String?,
+    val createdAtMillis: Long
+)
+
 data class ArenaUiState(
     val currentUser: FirebaseUser? = null,
     val chats: List<ChatSummary> = emptyList(),
     val messages: List<ChatMessage> = emptyList(),
+    val artifacts: List<WorkspaceArtifact> = emptyList(),
     val selectedChatId: String? = null,
     val inputText: String = "",
     val mode: ArenaMode = ArenaMode.RANDOM,

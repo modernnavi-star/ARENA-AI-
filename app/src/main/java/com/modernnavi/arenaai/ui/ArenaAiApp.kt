@@ -65,7 +65,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -80,11 +82,12 @@ import com.modernnavi.arenaai.data.ArenaUiState
 import com.modernnavi.arenaai.data.ArenaViewModel
 import com.modernnavi.arenaai.data.ChatMessage
 import com.modernnavi.arenaai.data.ChatSummary
+import com.modernnavi.arenaai.data.WorkspaceArtifact
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-enum class AppTab(val label: String) { CHAT("Chat"), HISTORY("History"), SETTINGS("Settings") }
+enum class AppTab(val label: String) { CHAT("Chat"), HISTORY("History"), WORKSPACE("Workspace"), SETTINGS("Settings") }
 
 @Composable
 fun ArenaAiApp(viewModel: ArenaViewModel) {
@@ -297,6 +300,12 @@ private fun HomeScaffold(
                     label = { Text(AppTab.HISTORY.label) }
                 )
                 NavigationBarItem(
+                    selected = tab == AppTab.WORKSPACE,
+                    onClick = { tab = AppTab.WORKSPACE },
+                    icon = { Icon(Icons.Rounded.SmartToy, contentDescription = null) },
+                    label = { Text(AppTab.WORKSPACE.label) }
+                )
+                NavigationBarItem(
                     selected = tab == AppTab.SETTINGS,
                     onClick = { tab = AppTab.SETTINGS },
                     icon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
@@ -322,6 +331,10 @@ private fun HomeScaffold(
                     tab = AppTab.CHAT
                 },
                 onDeleteChat = onDeleteChat,
+                modifier = Modifier.padding(padding)
+            )
+            AppTab.WORKSPACE -> WorkspaceScreen(
+                artifacts = state.artifacts,
                 modifier = Modifier.padding(padding)
             )
             AppTab.SETTINGS -> SettingsScreen(
@@ -562,6 +575,60 @@ private fun ChatHistoryItem(chat: ChatSummary, onOpen: () -> Unit, onDelete: () 
                 )
             }
             IconButton(onClick = onDelete) { Icon(Icons.Rounded.Delete, contentDescription = "Delete chat") }
+        }
+    }
+}
+
+@Composable
+private fun WorkspaceScreen(artifacts: List<WorkspaceArtifact>, modifier: Modifier = Modifier) {
+    val clipboard = LocalClipboardManager.current
+    var selectedArtifact by remember { mutableStateOf<WorkspaceArtifact?>(null) }
+
+    Column(modifier = modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Workspace", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(
+            "Generated files from chats appear here. Copy Markdown/HTML into any editor, browser, or PDF converter.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        if (artifacts.isEmpty()) {
+            Card(shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("No generated files yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Ask Arena AI to write an article, plan, code, report, or comparison. The app will save generated Markdown and HTML/PDF-ready files here.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.weight(1f)) {
+                items(artifacts, key = { it.id }) { artifact ->
+                    Card(onClick = { selectedArtifact = artifact }, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(artifact.fileName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text(artifact.fileType, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                            Text(artifact.content.take(160), maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            }
+        }
+
+        selectedArtifact?.let { artifact ->
+            Card(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Preview: ${artifact.fileName}", fontWeight = FontWeight.SemiBold)
+                    Text(artifact.content.take(900), maxLines = 10, overflow = TextOverflow.Ellipsis)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { clipboard.setText(AnnotatedString(artifact.content)) }) {
+                            Text("Copy file content")
+                        }
+                        TextButton(onClick = { selectedArtifact = null }) { Text("Close") }
+                    }
+                }
+            }
         }
     }
 }

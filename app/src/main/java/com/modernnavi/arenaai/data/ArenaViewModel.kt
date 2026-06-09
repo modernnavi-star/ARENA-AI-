@@ -15,7 +15,9 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.functions.FirebaseFunctionsException
 import com.google.firebase.functions.ktx.functions
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.tasks.await
 
 class ArenaViewModel : ViewModel() {
@@ -25,6 +27,7 @@ class ArenaViewModel : ViewModel() {
 
     private var chatsListener: ListenerRegistration? = null
     private var messagesListener: ListenerRegistration? = null
+    private var artifactsListener: ListenerRegistration? = null
 
     var uiState by mutableStateOf(ArenaUiState(currentUser = auth.currentUser))
         private set
@@ -34,11 +37,14 @@ class ArenaViewModel : ViewModel() {
         uiState = ArenaUiState(currentUser = user)
         chatsListener?.remove()
         messagesListener?.remove()
+        artifactsListener?.remove()
         chatsListener = null
         messagesListener = null
+        artifactsListener = null
         if (user != null) {
             ensureUserProfile()
             listenToChats(user.uid)
+            listenToArtifacts(user.uid)
         }
     }
 
@@ -47,6 +53,7 @@ class ArenaViewModel : ViewModel() {
         auth.currentUser?.let {
             ensureUserProfile()
             listenToChats(it.uid)
+            listenToArtifacts(it.uid)
         }
     }
 
@@ -112,17 +119,19 @@ class ArenaViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 ensureUserProfile()
-                val result = functions
-                    .getHttpsCallable("sendArenaPrompt")
-                    .call(
-                        mapOf(
-                            "prompt" to prompt,
-                            "chatId" to selectedChatId,
-                            "mode" to mode.wireName,
-                            "model" to selectedModel.wireName
+                val result = withTimeout(4000) {
+                    functions
+                        .getHttpsCallable("sendArenaPrompt")
+                        .call(
+                            mapOf(
+                                "prompt" to prompt,
+                                "chatId" to selectedChatId,
+                                "mode" to mode.wireName,
+                                "model" to selectedModel.wireName
+                            )
                         )
-                    )
-                    .await()
+                        .await()
+                }
 
                 @Suppress("UNCHECKED_CAST")
                 val data = result.getData() as? Map<String, Any?>
@@ -183,20 +192,24 @@ class ArenaViewModel : ViewModel() {
     ) {
         val answer = buildLocalArenaResponse(prompt, mode, selectedModel)
         val modelUsed = localModelName(mode, selectedModel)
+        val now = System.currentTimeMillis()
+        uiState = uiState.copy(
+            messages = uiState.messages + listOf(
+                ChatMessage("local-user-$now", "user", prompt, null, now),
+                ChatMessage("local-ai-$now", "assistant", answer, modelUsed, now + 1)
+            ),
+            error = null
+        )
         try {
-            val chatId = saveLocalArenaResponse(uid, existingChatId, prompt, answer, mode, modelUsed)
+            val chatId = withTimeout(6000) {
+                saveLocalArenaResponse(uid, existingChatId, prompt, answer, mode, modelUsed)
+            }
             if (chatId != uiState.selectedChatId) {
                 selectChat(chatId)
             }
-            uiState = uiState.copy(error = null)
         } catch (saveError: Throwable) {
-            val now = System.currentTimeMillis()
             uiState = uiState.copy(
-                messages = uiState.messages + listOf(
-                    ChatMessage("local-user-$now", "user", prompt, null, now),
-                    ChatMessage("local-ai-$now", "assistant", answer, modelUsed, now + 1)
-                ),
-                error = "Showing Arena Local response. Firestore save failed: ${saveError.localizedMessage ?: "unknown error"}"
+                error = "Response shown. Cloud save is pending or unavailable: ${saveError.localizedMessage ?: "unknown error"}"
             )
         }
     }
@@ -251,13 +264,18 @@ class ArenaViewModel : ViewModel() {
             SetOptions.merge()
         ).await()
 
+        saveWorkspaceArtifacts(uid, chatRef.id, prompt, answer, mode, modelUsed)
         return chatRef.id
     }
 
     private fun shouldUseLocalArenaFallback(throwable: Throwable): Boolean {
         val functionsError = throwable as? FirebaseFunctionsException
-        return functionsError?.code == FirebaseFunctionsException.Code.NOT_FOUND ||
-            throwable.localizedMessage?.contains("NOT_FOUND", ignoreCase = true) == true
+        return throwable is TimeoutCancellationException ||
+            functionsError?.code == FirebaseFunctionsException.Code.NOT_FOUND ||
+            functionsError?.code == FirebaseFunctionsException.Code.UNAVAILABLE ||
+            functionsError?.code == FirebaseFunctionsException.Code.DEADLINE_EXCEEDED ||
+            throwable.localizedMessage?.contains("NOT_FOUND", ignoreCase = true) == true ||
+            throwable.localizedMessage?.contains("timeout", ignoreCase = true) == true
     }
 
     private fun buildLocalArenaResponse(prompt: String, mode: ArenaMode, selectedModel: AiModelChoice): String {
@@ -376,6 +394,23 @@ class ArenaViewModel : ViewModel() {
         Produce a clear answer with sections, examples, and next steps. Avoid vague claims and make the response easy to use immediately.
     """.trimIndent()
 
+    private fun makeFileBaseName(prompt: String): String {
+        return makeTitle(prompt)
+            .lowercase()
+            .replace(Regex("[^a-z0-9]+"), "-")
+            .trim('-')
+            .ifBlank { "arena-response" }
+            .take(40)
+    }
+
+    private fun escapeHtml(value: String): String {
+        return value
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace(""", "&quot;")
+    }
+
     private fun localModelName(mode: ArenaMode, selectedModel: AiModelChoice): String {
         return if (mode == ArenaMode.DUEL) {
             "Arena Local Duel"
@@ -386,6 +421,85 @@ class ArenaViewModel : ViewModel() {
 
     private fun makeTitle(prompt: String): String {
         return prompt.replace(Regex("\\s+"), " ").trim().take(64).ifBlank { "New chat" }
+    }
+
+    private suspend fun saveWorkspaceArtifacts(
+        uid: String,
+        chatId: String,
+        prompt: String,
+        answer: String,
+        mode: ArenaMode,
+        modelUsed: String
+    ) {
+        val baseName = makeFileBaseName(prompt)
+        val artifactsRef = db.collection("users").document(uid).collection("artifacts")
+        val markdown = listOf(
+            "# ${makeTitle(prompt)}",
+            "",
+            "**Mode:** ${mode.label}",
+            "**Model:** $modelUsed",
+            "",
+            "## Prompt",
+            prompt.trim(),
+            "",
+            "## Response",
+            answer.trim()
+        ).joinToString("\n")
+        artifactsRef.add(
+            mapOf(
+                "fileName" to "$baseName.md",
+                "fileType" to "Markdown",
+                "content" to markdown,
+                "chatId" to chatId,
+                "createdAt" to FieldValue.serverTimestamp()
+            )
+        ).await()
+
+        val html = """
+            <!doctype html>
+            <html><head><meta charset=\"utf-8\"><title>${makeTitle(prompt)}</title></head>
+            <body style=\"font-family: sans-serif; line-height: 1.5; padding: 24px;\">
+            <h1>${makeTitle(prompt)}</h1>
+            <p><b>Mode:</b> ${mode.label}<br><b>Model:</b> $modelUsed</p>
+            <h2>Prompt</h2><p>${escapeHtml(prompt)}</p>
+            <h2>Response</h2><pre style=\"white-space: pre-wrap; font-family: sans-serif;\">${escapeHtml(answer)}</pre>
+            </body></html>
+        """.trimIndent()
+        artifactsRef.add(
+            mapOf(
+                "fileName" to "$baseName.html",
+                "fileType" to "HTML / PDF-ready",
+                "content" to html,
+                "chatId" to chatId,
+                "createdAt" to FieldValue.serverTimestamp()
+            )
+        ).await()
+    }
+
+    private fun listenToArtifacts(uid: String) {
+        artifactsListener?.remove()
+        artifactsListener = db.collection("users")
+            .document(uid)
+            .collection("artifacts")
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit(100)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    uiState = uiState.copy(error = error.localizedMessage)
+                    return@addSnapshotListener
+                }
+                val artifacts = snapshot?.documents.orEmpty().map { doc ->
+                    WorkspaceArtifact(
+                        id = doc.id,
+                        fileName = doc.getString("fileName") ?: "generated-file.md",
+                        fileType = doc.getString("fileType") ?: "Text",
+                        content = doc.getString("content") ?: "",
+                        chatId = doc.getString("chatId"),
+                        createdAtMillis = doc.getTimestamp("createdAt")?.toDate()?.time ?: 0L
+                    )
+                }
+                uiState = uiState.copy(artifacts = artifacts)
+            }
     }
 
     private fun listenToChats(uid: String) {
@@ -431,6 +545,7 @@ class ArenaViewModel : ViewModel() {
         auth.removeAuthStateListener(authListener)
         chatsListener?.remove()
         messagesListener?.remove()
+        artifactsListener?.remove()
         super.onCleared()
     }
 }
