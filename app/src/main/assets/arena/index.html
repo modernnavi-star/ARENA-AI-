@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Arena AI</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app" class="app">
+    <aside id="side" class="side">
+      <header class="brand"><span class="temple">▥</span><span>Arena</span><button id="modeMenuButton" class="plain">⌄</button></header>
+      <button id="newChatSide" class="new-chat">＋ New Chat</button>
+      <nav class="mode-list">
+        <button class="mode-item" data-mode="battle"><span>⚔</span><div><b>Battle Mode</b><small>Battle 2 anonymous models</small></div></button>
+        <button class="mode-item" data-mode="agent"><span>🛠</span><div><b>Agent Mode</b><small>Built for complex tasks</small></div></button>
+        <button class="mode-item" data-mode="side"><span>💬</span><div><b>Side by Side</b><small>Compare 2 models of your choice</small></div></button>
+        <button class="mode-item" data-mode="direct"><span>○</span><div><b>Direct</b><small>Chat with 1 model at a time</small></div></button>
+      </nav>
+      <section class="history-wrap"><div class="history-title">Chats</div><div id="history"></div></section>
+      <footer class="account"><div class="avatar"></div><div class="account-text"><b id="userName">Arena user</b><small id="userEmail"></small></div><button id="signOut" class="mini">Sign out</button></footer>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button id="openSide" class="icon mobile">☰</button>
+        <div><h1 id="topTitle">Arena</h1><p id="topSubtitle">Built for complex tasks</p></div>
+        <div class="top-actions"><button id="openWorkspace" class="icon">📁</button><button id="newChatTop" class="icon">＋</button></div>
+      </header>
+      <section id="chat" class="chat"></section>
+      <section class="composer">
+        <div id="attachments" class="attachments"></div>
+        <div class="compose-box">
+          <button id="attach" class="attach">📎</button>
+          <textarea id="prompt" rows="1" placeholder="Message Arena AI..."></textarea>
+          <button id="send" class="send">➜</button>
+          <input id="fileInput" type="file" multiple hidden>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="overlay" class="overlay"></div>
+  <section id="workspace" class="workspace">
+    <header><h2>Workspace</h2><button id="closeWorkspace" class="icon">✕</button></header>
+    <div class="workspace-tools"><button id="exportAll" class="pill">Download all JSON</button><button id="clearWorkspace" class="pill danger">Clear</button></div>
+    <div id="workspaceList" class="workspace-list"></div>
+  </section>
+  <div id="toast" class="toast"></div>
+  <script src="arena.js"></script>
+</body>
+</html>
