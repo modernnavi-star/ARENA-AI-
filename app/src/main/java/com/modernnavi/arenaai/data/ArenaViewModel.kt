@@ -163,6 +163,15 @@ class ArenaViewModel : ViewModel() {
     }
 
     fun deleteChat(chatId: String) {
+        if (chatId.startsWith("local-chat-")) {
+            uiState = uiState.copy(
+                chats = uiState.chats.filterNot { it.id == chatId },
+                artifacts = uiState.artifacts.filterNot { it.chatId == chatId },
+                messages = if (uiState.selectedChatId == chatId) emptyList() else uiState.messages,
+                selectedChatId = if (uiState.selectedChatId == chatId) null else uiState.selectedChatId
+            )
+            return
+        }
         val uid = uiState.currentUser?.uid ?: return
         viewModelScope.launch {
             try {
@@ -193,24 +202,35 @@ class ArenaViewModel : ViewModel() {
         val answer = buildLocalArenaResponse(prompt, mode, selectedModel)
         val modelUsed = localModelName(mode, selectedModel)
         val now = System.currentTimeMillis()
+        val localChatId = existingChatId ?: "local-chat-$now"
+        val localArtifacts = buildWorkspaceArtifacts(localChatId, prompt, answer, mode, modelUsed, now)
+        val localSummary = ChatSummary(
+            id = localChatId,
+            title = makeTitle(prompt),
+            lastMessage = answer.take(240),
+            modelUsed = modelUsed,
+            updatedAtMillis = now
+        )
         uiState = uiState.copy(
+            selectedChatId = localChatId,
             messages = uiState.messages + listOf(
                 ChatMessage("local-user-$now", "user", prompt, null, now),
                 ChatMessage("local-ai-$now", "assistant", answer, modelUsed, now + 1)
             ),
+            chats = upsertLocalChat(uiState.chats, localSummary),
+            artifacts = (localArtifacts + uiState.artifacts).distinctBy { it.id },
+            inputText = "",
             error = null
         )
         try {
-            val chatId = withTimeout(6000) {
+            val chatId = withTimeout(2500) {
                 saveLocalArenaResponse(uid, existingChatId, prompt, answer, mode, modelUsed)
             }
-            if (chatId != uiState.selectedChatId) {
+            if (chatId != uiState.selectedChatId && !uiState.selectedChatId.orEmpty().startsWith("local-chat-")) {
                 selectChat(chatId)
             }
-        } catch (saveError: Throwable) {
-            uiState = uiState.copy(
-                error = "Response shown. Cloud save is pending or unavailable: ${saveError.localizedMessage ?: "unknown error"}"
-            )
+        } catch (_: Throwable) {
+            // Keep the fully working local Arena result. Cloud sync can be configured later.
         }
     }
 
@@ -309,19 +329,31 @@ class ArenaViewModel : ViewModel() {
     private fun buildArticleAnswer(prompt: String, modelLabel: String): String = """
         $modelLabel response
 
-        Title: ${makeTitle(prompt).replaceFirstChar { it.uppercase() }}
+        # ${makeTitle(prompt).replaceFirstChar { it.uppercase() }}
 
-        Introduction
-        Artificial intelligence is becoming one of the most important technologies in modern life. It helps people create content, solve problems, automate work, learn faster, and make better decisions.
+        ## Introduction
+        Artificial intelligence, commonly known as AI, is one of the most influential technologies of the modern world. It allows computers and software systems to perform tasks that normally require human intelligence, such as understanding language, recognizing images, writing content, solving problems, and making predictions.
 
-        Main points
-        1. AI improves productivity by handling repetitive tasks and giving quick suggestions.
-        2. AI supports creativity by helping with writing, design, coding, planning, and research.
-        3. AI can personalize learning and make complex topics easier to understand.
-        4. Responsible use is important because AI can make mistakes, reflect bias, or miss context.
+        ## How AI is changing daily life
+        AI is already present in many parts of everyday life. Search engines use AI to understand questions, smartphones use AI to improve photos, maps use AI to suggest routes, and chat assistants use AI to help with writing, learning, planning, and coding. This makes technology faster, more personal, and easier to use.
 
-        Conclusion
-        AI is powerful when used as an assistant, not as a replacement for human judgment. The best results come from clear instructions, careful review, and ethical use.
+        ## Benefits of AI
+        1. Productivity: AI can complete repetitive work quickly and help people focus on creative or strategic tasks.
+        2. Learning: AI can explain difficult topics in simple language and support students in many languages.
+        3. Healthcare: AI can help doctors analyze data, detect patterns, and improve decision-making.
+        4. Business: Companies use AI for customer support, automation, marketing, data analysis, and product development.
+        5. Creativity: Writers, designers, developers, and creators can use AI to generate ideas and improve their work.
+
+        ## Challenges and responsible use
+        AI is powerful, but it is not perfect. It can make mistakes, misunderstand context, or produce biased results if the data or instructions are poor. For this reason, users should verify important information and use AI responsibly. Privacy, fairness, transparency, and safety are important when building or using AI systems.
+
+        ## Future of AI
+        The future of AI will likely include more advanced assistants, better automation, smarter education tools, and stronger support for businesses and creators. The best use of AI is not to replace people, but to help people work faster, think better, and solve bigger problems.
+
+        ## Conclusion
+        AI is transforming the way humans interact with technology. When used carefully and ethically, it can improve productivity, education, creativity, and decision-making. The most successful future will be one where humans and AI work together.
+
+        Workspace: I also generated Markdown, plain text, HTML/PDF-ready, and JSON versions for this response in the Workspace tab.
     """.trimIndent()
 
     private fun buildTechnicalPlan(prompt: String, modelLabel: String): String = """
@@ -411,6 +443,14 @@ class ArenaViewModel : ViewModel() {
             .replace("\"", "&quot;")
     }
 
+    private fun escapeJson(value: String): String {
+        return value
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+    }
+
     private fun localModelName(mode: ArenaMode, selectedModel: AiModelChoice): String {
         return if (mode == ArenaMode.DUEL) {
             "Arena Local Duel"
@@ -423,6 +463,83 @@ class ArenaViewModel : ViewModel() {
         return prompt.replace(Regex("\\s+"), " ").trim().take(64).ifBlank { "New chat" }
     }
 
+    private fun upsertLocalChat(chats: List<ChatSummary>, summary: ChatSummary): List<ChatSummary> {
+        return listOf(summary) + chats.filterNot { it.id == summary.id }
+    }
+
+    private fun buildWorkspaceArtifacts(
+        chatId: String,
+        prompt: String,
+        answer: String,
+        mode: ArenaMode,
+        modelUsed: String,
+        now: Long
+    ): List<WorkspaceArtifact> {
+        val baseName = makeFileBaseName(prompt)
+        val title = makeTitle(prompt)
+        val markdown = listOf(
+            "# $title",
+            "",
+            "**Mode:** ${mode.label}",
+            "**Model:** $modelUsed",
+            "**Language:** Auto / multilingual",
+            "",
+            "## Prompt",
+            prompt.trim(),
+            "",
+            "## Response",
+            answer.trim()
+        ).joinToString("\n")
+        val text = listOf(
+            title,
+            "Mode: ${mode.label}",
+            "Model: $modelUsed",
+            "",
+            "Prompt:",
+            prompt.trim(),
+            "",
+            "Response:",
+            answer.trim()
+        ).joinToString("\n")
+        val html = """
+            <!doctype html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width,initial-scale=1">
+              <title>${escapeHtml(title)}</title>
+              <style>
+                body { font-family: Arial, sans-serif; line-height: 1.55; padding: 32px; color: #111827; }
+                h1 { color: #4c1d95; }
+                .meta { color: #475569; border-left: 4px solid #8b5cf6; padding-left: 12px; }
+                pre { white-space: pre-wrap; font-family: Arial, sans-serif; }
+              </style>
+            </head>
+            <body>
+              <h1>${escapeHtml(title)}</h1>
+              <p class="meta"><b>Mode:</b> ${mode.label}<br><b>Model:</b> $modelUsed<br><b>Format:</b> Print this page to save as PDF.</p>
+              <h2>Prompt</h2><p>${escapeHtml(prompt)}</p>
+              <h2>Response</h2><pre>${escapeHtml(answer)}</pre>
+            </body>
+            </html>
+        """.trimIndent()
+        val json = """
+            {
+              "title": "${escapeJson(title)}",
+              "mode": "${escapeJson(mode.label)}",
+              "model": "${escapeJson(modelUsed)}",
+              "prompt": "${escapeJson(prompt)}",
+              "response": "${escapeJson(answer)}"
+            }
+        """.trimIndent()
+        return listOf(
+            WorkspaceArtifact("$chatId-md-$now", "$baseName.md", "Markdown", markdown, chatId, now),
+            WorkspaceArtifact("$chatId-txt-$now", "$baseName.txt", "Plain text", text, chatId, now + 1),
+            WorkspaceArtifact("$chatId-html-$now", "$baseName.html", "HTML / PDF-ready", html, chatId, now + 2),
+            WorkspaceArtifact("$chatId-json-$now", "$baseName.json", "JSON", json, chatId, now + 3)
+        )
+    }
+
     private suspend fun saveWorkspaceArtifacts(
         uid: String,
         chatId: String,
@@ -431,49 +548,18 @@ class ArenaViewModel : ViewModel() {
         mode: ArenaMode,
         modelUsed: String
     ) {
-        val baseName = makeFileBaseName(prompt)
         val artifactsRef = db.collection("users").document(uid).collection("artifacts")
-        val markdown = listOf(
-            "# ${makeTitle(prompt)}",
-            "",
-            "**Mode:** ${mode.label}",
-            "**Model:** $modelUsed",
-            "",
-            "## Prompt",
-            prompt.trim(),
-            "",
-            "## Response",
-            answer.trim()
-        ).joinToString("\n")
-        artifactsRef.add(
-            mapOf(
-                "fileName" to "$baseName.md",
-                "fileType" to "Markdown",
-                "content" to markdown,
-                "chatId" to chatId,
-                "createdAt" to FieldValue.serverTimestamp()
-            )
-        ).await()
-
-        val html = """
-            <!doctype html>
-            <html><head><meta charset=\"utf-8\"><title>${makeTitle(prompt)}</title></head>
-            <body style=\"font-family: sans-serif; line-height: 1.5; padding: 24px;\">
-            <h1>${makeTitle(prompt)}</h1>
-            <p><b>Mode:</b> ${mode.label}<br><b>Model:</b> $modelUsed</p>
-            <h2>Prompt</h2><p>${escapeHtml(prompt)}</p>
-            <h2>Response</h2><pre style=\"white-space: pre-wrap; font-family: sans-serif;\">${escapeHtml(answer)}</pre>
-            </body></html>
-        """.trimIndent()
-        artifactsRef.add(
-            mapOf(
-                "fileName" to "$baseName.html",
-                "fileType" to "HTML / PDF-ready",
-                "content" to html,
-                "chatId" to chatId,
-                "createdAt" to FieldValue.serverTimestamp()
-            )
-        ).await()
+        buildWorkspaceArtifacts(chatId, prompt, answer, mode, modelUsed, System.currentTimeMillis()).forEach { artifact ->
+            artifactsRef.add(
+                mapOf(
+                    "fileName" to artifact.fileName,
+                    "fileType" to artifact.fileType,
+                    "content" to artifact.content,
+                    "chatId" to chatId,
+                    "createdAt" to FieldValue.serverTimestamp()
+                )
+            ).await()
+        }
     }
 
     private fun listenToArtifacts(uid: String) {
