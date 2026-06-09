@@ -56,6 +56,10 @@ class ArenaViewModel : ViewModel() {
         uiState = uiState.copy(mode = mode)
     }
 
+    fun setModelChoice(model: AiModelChoice) {
+        uiState = uiState.copy(selectedModel = model)
+    }
+
     fun clearError() {
         uiState = uiState.copy(error = null)
     }
@@ -100,6 +104,7 @@ class ArenaViewModel : ViewModel() {
 
         val selectedChatId = uiState.selectedChatId
         val mode = uiState.mode
+        val selectedModel = uiState.selectedModel
         uiState = uiState.copy(inputText = "", isSending = true, error = null)
 
         viewModelScope.launch {
@@ -111,7 +116,8 @@ class ArenaViewModel : ViewModel() {
                         mapOf(
                             "prompt" to prompt,
                             "chatId" to selectedChatId,
-                            "mode" to mode.wireName
+                            "mode" to mode.wireName,
+                            "model" to selectedModel.wireName
                         )
                     )
                     .await()

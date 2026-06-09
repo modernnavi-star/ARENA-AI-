@@ -1,6 +1,5 @@
 package com.modernnavi.arenaai.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -27,6 +26,6 @@ private val LightColors = lightColorScheme(
 
 @Composable
 fun ArenaTheme(content: @Composable () -> Unit) {
-    val colors = if (isSystemInDarkTheme()) DarkColors else LightColors
-    MaterialTheme(colorScheme = colors, content = content)
+    // Arena-style experience: keep the app in a consistent dark AI-chat theme.
+    MaterialTheme(colorScheme = DarkColors, content = content)
 }

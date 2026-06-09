@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -73,6 +74,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import com.modernnavi.arenaai.data.AiModelChoice
 import com.modernnavi.arenaai.data.ArenaMode
 import com.modernnavi.arenaai.data.ArenaUiState
 import com.modernnavi.arenaai.data.ArenaViewModel
@@ -95,6 +97,7 @@ fun ArenaAiApp(viewModel: ArenaViewModel) {
             onInputChange = viewModel::setInput,
             onSend = viewModel::sendPrompt,
             onModeChange = viewModel::setMode,
+            onModelChange = viewModel::setModelChoice,
             onSelectChat = viewModel::selectChat,
             onNewChat = viewModel::newChat,
             onDeleteChat = viewModel::deleteChat,
@@ -248,6 +251,7 @@ private fun HomeScaffold(
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
     onModeChange: (ArenaMode) -> Unit,
+    onModelChange: (AiModelChoice) -> Unit,
     onSelectChat: (String?) -> Unit,
     onNewChat: () -> Unit,
     onDeleteChat: (String) -> Unit,
@@ -307,6 +311,7 @@ private fun HomeScaffold(
                 onInputChange = onInputChange,
                 onSend = onSend,
                 onModeChange = onModeChange,
+                onModelChange = onModelChange,
                 onOpenHistory = { tab = AppTab.HISTORY },
                 modifier = Modifier.padding(padding)
             )
@@ -334,6 +339,7 @@ private fun ChatScreen(
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
     onModeChange: (ArenaMode) -> Unit,
+    onModelChange: (AiModelChoice) -> Unit,
     onOpenHistory: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -350,19 +356,25 @@ private fun ChatScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         ModeSelector(selected = state.mode, onModeChange = onModeChange)
+        ModelSelector(selected = state.selectedModel, onModelChange = onModelChange)
 
-        if (state.selectedChatId == null && state.messages.isEmpty()) {
-            EmptyChat(onOpenHistory)
-        } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(state.messages, key = { it.id }) { message -> MessageBubble(message) }
-                if (state.isSending) {
-                    item { TypingBubble(state.mode) }
+        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+            if (state.selectedChatId == null && state.messages.isEmpty() && !state.isSending) {
+                EmptyChat(
+                    onOpenHistory = onOpenHistory,
+                    onSamplePrompt = onInputChange
+                )
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(state.messages, key = { it.id }) { message -> MessageBubble(message) }
+                    if (state.isSending) {
+                        item { TypingBubble(state.mode) }
+                    }
                 }
             }
         }
@@ -379,7 +391,7 @@ private fun ChatScreen(
                 onValueChange = onInputChange,
                 minLines = 1,
                 maxLines = 5,
-                placeholder = { Text("Ask a complex task...") },
+                placeholder = { Text("Message Arena AI...") },
                 modifier = Modifier.weight(1f)
             )
             Button(onClick = onSend, enabled = state.inputText.isNotBlank() && !state.isSending) {
@@ -406,23 +418,50 @@ private fun ModeSelector(selected: ArenaMode, onModeChange: (ArenaMode) -> Unit)
     }
 }
 
+
 @Composable
-private fun EmptyChat(onOpenHistory: () -> Unit) {
+private fun ModelSelector(selected: AiModelChoice, onModelChange: (AiModelChoice) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+        Text("Models", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(AiModelChoice.entries, key = { it.wireName }) { model ->
+                FilterChip(
+                    selected = selected == model,
+                    onClick = { onModelChange(model) },
+                    label = { Text(model.label) }
+                )
+            }
+        }
+        Text(selected.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun EmptyChat(onOpenHistory: () -> Unit, onSamplePrompt: (String) -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 28.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Icon(Icons.Rounded.SmartToy, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
         Text("Ready for your next task", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
         Text(
-            "Use Random AI for a fast answer or Arena Duel to compare models behind the scenes.",
+            "Pick a model, choose Random AI or Arena Duel, then type below.",
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            items(
+                listOf(
+                    "Plan my study schedule",
+                    "Write code for an app screen",
+                    "Compare two phones",
+                    "Summarize a PDF idea"
+                )
+            ) { prompt ->
+                AssistChip(onClick = { onSamplePrompt(prompt) }, label = { Text(prompt) })
+            }
+        }
         AssistChip(onClick = onOpenHistory, label = { Text("Open saved history") }, leadingIcon = { Icon(Icons.Rounded.History, null) })
-        Spacer(Modifier.weight(1f))
     }
 }
 

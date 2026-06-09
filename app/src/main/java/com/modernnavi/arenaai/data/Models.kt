@@ -5,7 +5,15 @@ import com.google.firebase.auth.FirebaseUser
 /** Chat routing mode exposed to users. */
 enum class ArenaMode(val wireName: String, val label: String, val description: String) {
     RANDOM("random", "Random AI", "One available model is chosen automatically."),
-    DUEL("duel", "Arena Duel", "Two models answer; the app shows a fused best response.")
+    DUEL("duel", "Arena Duel", "Two models answer side-by-side so you can compare.")
+}
+
+enum class AiModelChoice(val wireName: String, val label: String, val description: String) {
+    RANDOM("random", "Random", "Let Arena choose"),
+    GEMINI("gemini", "Gemini", "Google model"),
+    OPENAI("openai", "OpenAI", "GPT model"),
+    CLAUDE("anthropic", "Claude", "Anthropic model"),
+    MISTRAL("mistral", "Mistral", "Fast open model")
 }
 
 data class ChatSummary(
@@ -31,6 +39,7 @@ data class ArenaUiState(
     val selectedChatId: String? = null,
     val inputText: String = "",
     val mode: ArenaMode = ArenaMode.RANDOM,
+    val selectedModel: AiModelChoice = AiModelChoice.RANDOM,
     val isSending: Boolean = false,
     val isLoadingHistory: Boolean = false,
     val error: String? = null

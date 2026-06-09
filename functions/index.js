@@ -24,6 +24,9 @@ exports.sendArenaPrompt = onCall(
     const data = request.data || {};
     const prompt = typeof data.prompt === "string" ? data.prompt.trim() : "";
     const mode = data.mode === "duel" ? "duel" : "random";
+    const requestedModel = typeof data.model === "string" && data.model.trim()
+      ? data.model.trim().toLowerCase()
+      : "random";
     const requestedChatId = typeof data.chatId === "string" && data.chatId.trim() ? data.chatId.trim() : null;
 
     if (!prompt) {
@@ -65,8 +68,8 @@ exports.sendArenaPrompt = onCall(
 
     const aiMessages = [...previousMessages, { role: "user", content: prompt }];
     const answerPayload = mode === "duel"
-      ? await runDuel(aiMessages)
-      : await runRandom(aiMessages);
+      ? await runDuel(aiMessages, requestedModel)
+      : await runRandom(aiMessages, requestedModel);
 
     await chatRef.collection("messages").add({
       role: "assistant",
@@ -125,9 +128,12 @@ async function loadRecentMessages(chatRef, limit) {
     .filter((message) => message.content.trim());
 }
 
-async function runRandom(messages) {
+async function runRandom(messages, requestedModel = "random") {
   const providers = configuredProviders();
-  const provider = pickRandom(providers);
+  const provider = chooseProvider(providers, requestedModel);
+  if (!provider) {
+    return missingProviderResponse(requestedModel);
+  }
   const response = await callProvider(provider, messages);
   return {
     answer: response.content,
@@ -136,9 +142,17 @@ async function runRandom(messages) {
   };
 }
 
-async function runDuel(messages) {
+async function runDuel(messages, requestedModel = "random") {
   const providers = configuredProviders();
-  const picked = pickMany(providers, Math.min(2, providers.length));
+  let picked;
+  if (requestedModel !== "random") {
+    const first = chooseProvider(providers, requestedModel);
+    if (!first) return missingProviderResponse(requestedModel);
+    const others = providers.filter((provider) => provider.id !== first.id);
+    picked = [first, ...pickMany(others, Math.min(1, others.length))];
+  } else {
+    picked = pickMany(providers, Math.min(2, providers.length));
+  }
   const responses = await Promise.all(
     picked.map(async (provider) => {
       try {
@@ -174,6 +188,33 @@ async function runDuel(messages) {
     answer,
     modelUsed: responses.map((response) => response.model).join(" vs "),
     candidates: responses.map((response, index) => ({ slot: index === 0 ? "A" : "B", model: response.model })),
+  };
+}
+
+function chooseProvider(providers, requestedModel) {
+  if (!requestedModel || requestedModel === "random") return pickRandom(providers);
+  return providers.find((provider) => provider.id === requestedModel) || null;
+}
+
+function missingProviderResponse(requestedModel) {
+  const labels = {
+    gemini: "Gemini",
+    openai: "OpenAI",
+    anthropic: "Claude",
+    mistral: "Mistral",
+  };
+  const label = labels[requestedModel] || requestedModel;
+  return {
+    answer: [
+      `${label} is selected, but that provider is not configured on the backend yet.`,
+      "",
+      "Add the matching Firebase Functions environment variable, then deploy functions again:",
+      "GEMINI_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, or MISTRAL_API_KEY.",
+      "",
+      "You can switch back to Random to use any provider that is already configured."
+    ].join("\n"),
+    modelUsed: "Setup Assistant",
+    candidates: [],
   };
 }
 
